@@ -1,0 +1,6 @@
+#!/bin/bash
+
+[ ! -d build ] && mkdir build
+[ ! -d m4 ] && mkdir m4
+autoreconf --force --install -I build -I m4
+

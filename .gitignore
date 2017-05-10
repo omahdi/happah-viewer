@@ -1,0 +1,26 @@
+#build files
+/aclocal.m4
+/autom4te.cache
+/build
+/config.log
+/config.status
+/configure
+/libtool
+/m4
+/src/happah
+**/Makefile
+**/.deps
+**/.dirstamp
+**/.libs
+*.in
+*.lo
+*.la
+*.o
+
+#Vim temp files
+*.swp
+
+#Gedit temp files
+*~
+
+
