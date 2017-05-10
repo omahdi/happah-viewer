@@ -34,8 +34,7 @@ void Viewer::execute(int argc, char* argv[]) {
      auto content = format::off::read(argv[1]);
      auto mesh = make_triangle_mesh<VertexP3>(content);
      auto boxes = make_loop_box_spline_mesh(mesh);
-     auto temp = TriangleMesh<VertexP3, Format::DIRECTED_EDGE>(mesh);
-     auto quartic = make_spline_surface(temp);
+     auto quartic = make_spline_surface(TriangleMesh<VertexP3, Format::DIRECTED_EDGE>(mesh));
      auto quintic = elevate(quartic);
 
      look_at(viewport, mesh.getVertices());
