@@ -20,7 +20,7 @@ Viewer::Viewer(hpuint width, hpuint height, const std::string& title)
      : m_window(width, height, title) {
      glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
      glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);//TODO: find current version
-     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
+     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
      glfwMakeContextCurrent(m_window.getContext());
      if(!gladLoadGL()) throw std::runtime_error("Failed to initialize Glad.");
 }
