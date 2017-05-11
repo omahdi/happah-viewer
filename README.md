@@ -7,6 +7,7 @@ New developers who wish to contribute to the project can get started by executin
 ```
 sudo apt install libglfw3-dev
 mkdir -p ${HOME}/Workspace/{bin,include,lib}
+cd ${HOME}/Workspace
 git clone http://github.com/happah-graphics/happah-viewer.git
 cd happah-viewer
 ./bootstrap
