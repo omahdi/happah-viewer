@@ -22,5 +22,5 @@ Make your changes and run ``` make ``` to compile the application and ``` make i
 
 If you have a release-ready version, tag it by executing ``` git tag -a v0.1 -m "version 0.1" ``` and upload the tag to Github using ``` git push origin v0.1 ``` to push a specific tag or ``` git push origin --tags ``` to push all tags at once.
 
-To use the viewer, execute ``` happah path-to-off-file ```.
+To use the viewer, execute ``` ${HOME}/Workspace/bin/happah path-to-off-file ```.
 
