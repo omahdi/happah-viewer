@@ -17,7 +17,7 @@ make install
 ln -s ../happah-graphics/shaders
 ```
 
-Make your changes and run ``` make && sudo make install ``` to update the library.  Finally, run ``` git push origin master ``` to upload your changes to Github.
+Make your changes and run ``` make ``` to compile the application and ``` make install ``` to install the application into the bin directory.  Finally, run ``` git push origin master ``` to upload your changes to Github.
 
 If you have a release-ready version, tag it by executing ``` git tag -a v0.1 -m "version 0.1" ``` and upload the tag to Github using ``` git push origin v0.1 ``` to push a specific tag or ``` git push origin --tags ``` to push all tags at once.
 
