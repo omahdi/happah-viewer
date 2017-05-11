@@ -29,7 +29,7 @@ void Viewer::execute(int argc, char* argv[]) {
      auto context = m_window.getContext();
      auto& viewport = m_window.getViewport();
 
-     std::cout << "INFO: Converting OFF into triangle mesh." << std::endl;
+     std::cout << "INFO: Importing " << argv[1] << '.' << std::endl;
 
      auto content = format::off::read(argv[1]);
      auto mesh = make_triangle_mesh<VertexP3>(content);
@@ -39,9 +39,7 @@ void Viewer::execute(int argc, char* argv[]) {
 
      look_at(viewport, mesh.getVertices());
 
-     std::cout << "INFO: Making programs." << std::endl;
-
-     auto array = make_vertex_array(Position(0));
+     std::cout << "INFO: Making shaders." << std::endl;
 
      auto sm_vx = make_simple_vertex_shader();
      auto nm_gm = make_geometry_shader("shaders/normals.g.glsl");
@@ -50,6 +48,8 @@ void Viewer::execute(int argc, char* argv[]) {
      auto lb_te = make_tessellation_evaluation_shader("shaders/loop-box-spline.te.glsl");
      auto qp_te = make_tessellation_evaluation_shader("shaders/quintic-patch.te.glsl");
 
+     std::cout << "INFO: Making programs." << std::endl;
+
      auto qpp = make_patches_program("quintic spline surface", 21, sm_vx, qp_te, hl_fr);
      auto qpc = make_render_context(quintic);
      auto tmp = make_triangles_program("triangle mesh", sm_vx, nm_gm, sm_fr);
@@ -57,7 +57,11 @@ void Viewer::execute(int argc, char* argv[]) {
      auto lmp = make_patches_program("loop box spline mesh", 12, sm_vx, lb_te, nm_gm, sm_fr);
      auto lmc = make_render_context(boxes);
 
-     glClearColor(1, 1, 1, 1);
+     std::cout << "INFO: Making vertex array." << std::endl;
+
+     auto array = make_vertex_array(Position(0));
+
+     std::cout << "INFO: Setting up scene." << std::endl;
 
      auto beamDirection = Vector3D(0.0, 0.0, 1.0);
      auto beamOrigin = Point3D(10.0, 0.0, 0.0);
@@ -67,6 +71,7 @@ void Viewer::execute(int argc, char* argv[]) {
 
      std::cout << "INFO: Rendering scene." << std::endl;
 
+     glClearColor(1, 1, 1, 1);
      while(!glfwWindowShouldClose(context)) {
           glfwPollEvents();
           glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
