@@ -26,6 +26,7 @@ Viewer::Viewer(hpuint width, hpuint height, const std::string& title)
 }
 
 void Viewer::execute(int argc, char* argv[]) {
+     
      auto context = m_window.getContext();
      auto& viewport = m_window.getViewport();
 
@@ -47,7 +48,9 @@ void Viewer::execute(int argc, char* argv[]) {
      auto hl_fr = make_highlight_lines_fragment_shader();
      auto lb_te = make_tessellation_evaluation_shader("shaders/loop-box-spline.te.glsl");
      auto qp_te = make_tessellation_evaluation_shader("shaders/quintic-patch.te.glsl");
-
+     auto swf_gm = make_geometry_shader("shaders/solid-wireframe.g.glsl");
+     auto swf_fr = make_swf_fragment_shader();
+     
      std::cout << "INFO: Making programs." << std::endl;
 
      auto qpp = make_patches_program("quintic spline surface", 21, sm_vx, qp_te, hl_fr);
@@ -56,6 +59,8 @@ void Viewer::execute(int argc, char* argv[]) {
      auto tmc = make_render_context(mesh);
      auto lmp = make_patches_program("loop box spline mesh", 12, sm_vx, lb_te, nm_gm, sm_fr);
      auto lmc = make_render_context(boxes);
+     auto swf = make_triangles_program("solid wireframe", sm_vx, swf_gm, swf_fr);
+     auto swfc = make_render_context(mesh);
 
      std::cout << "INFO: Making vertex array." << std::endl;
 
@@ -97,12 +102,22 @@ void Viewer::execute(int argc, char* argv[]) {
           hl_fr.setLight(light);
           render(qpp, array, qpc);*/
 
-          activate(tmp);
+          /*activate(tmp);
           sm_vx.setModelViewMatrix(viewMatrix);
           sm_vx.setProjectionMatrix(projectionMatrix);
           sm_fr.setModelColor(modelColor);
           sm_fr.setLight(light);
-          render(tmp, array, tmc);
+          render(tmp, array, tmc);*/
+          
+          activate(swf);
+          glEnable (GL_BLEND); glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+          sm_vx.setModelViewMatrix(viewMatrix);
+          sm_vx.setProjectionMatrix(projectionMatrix);
+          swf_fr.setModelColor(modelColor);
+          swf_fr.setEdgeColor({0, 0, 0, 0});
+          swf_fr.setEdgeWidth(0.01);
+          swf_fr.setLight(light);
+          render(swf, array, swfc);
 
           /*activate(lmp);
           sm_vx.setModelViewMatrix(viewMatrix);
