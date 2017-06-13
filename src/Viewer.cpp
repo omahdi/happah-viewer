@@ -35,6 +35,7 @@ void Viewer::execute(int argc, char* argv[]) {
      auto mesh = make_triangle_mesh<VertexP3>(content);
      auto boxes = make_loop_box_spline_mesh(mesh);
      auto quartic = make_spline_surface(TriangleMesh<VertexP3, Format::DIRECTED_EDGE>(mesh));
+     //auto mesh = make_triangle_mesh(quartic, 4);
      auto quintic = elevate(quartic);
 
      look_at(viewport, mesh.getVertices());
@@ -47,6 +48,8 @@ void Viewer::execute(int argc, char* argv[]) {
      auto hl_fr = make_highlight_lines_fragment_shader();
      auto lb_te = make_tessellation_evaluation_shader("shaders/loop-box-spline.te.glsl");
      auto qp_te = make_tessellation_evaluation_shader("shaders/quintic-patch.te.glsl");
+     auto wf_gm = make_geometry_shader("shaders/solid-wireframe.g.glsl");
+     auto wf_fr = make_wireframe_fragment_shader();
 
      std::cout << "INFO: Making programs." << std::endl;
 
@@ -56,6 +59,7 @@ void Viewer::execute(int argc, char* argv[]) {
      auto tmc = make_render_context(mesh);
      auto lmp = make_patches_program("loop box spline mesh", 12, sm_vx, lb_te, nm_gm, sm_fr);
      auto lmc = make_render_context(boxes);
+     auto wfp = make_triangles_program("wireframe triangle mesh", sm_vx, wf_gm, wf_fr);
 
      std::cout << "INFO: Making vertex array." << std::endl;
 
@@ -65,6 +69,8 @@ void Viewer::execute(int argc, char* argv[]) {
 
      auto beamDirection = Vector3D(0.0, 0.0, 1.0);
      auto beamOrigin = Point3D(10.0, 0.0, 0.0);
+     auto edgeColor = hpcolor(1, 0, 0, 1);
+     auto edgeWidth = 0.01;
      auto level0 = std::array<hpreal, 2>({ 100, 100 });
      auto level1 = std::array<hpreal, 4>({ 60, 60, 60, 60 });
      auto modelColor = hpcolor(0, 0, 1, 1);
@@ -97,18 +103,27 @@ void Viewer::execute(int argc, char* argv[]) {
           hl_fr.setLight(light);
           render(qpp, array, qpc);*/
 
-          activate(tmp);
+          /*activate(tmp);
           sm_vx.setModelViewMatrix(viewMatrix);
           sm_vx.setProjectionMatrix(projectionMatrix);
-          sm_fr.setModelColor(modelColor);
           sm_fr.setLight(light);
-          render(tmp, array, tmc);
+          sm_fr.setModelColor(modelColor);
+          render(tmp, array, tmc);*/
+
+          activate(wfp);
+          sm_vx.setModelViewMatrix(viewMatrix);
+          sm_vx.setProjectionMatrix(projectionMatrix);
+          wf_fr.setEdgeColor(edgeColor);
+          wf_fr.setEdgeWidth(edgeWidth);
+          wf_fr.setLight(light);
+          wf_fr.setModelColor(modelColor);
+          render(wfp, array, tmc);
 
           /*activate(lmp);
           sm_vx.setModelViewMatrix(viewMatrix);
           sm_vx.setProjectionMatrix(projectionMatrix);
-          sm_fr.setModelColor(modelColor);
           sm_fr.setLight(light);
+          sm_fr.setModelColor(modelColor);
           render(lmp, array, lmc);*/
 
           glfwSwapBuffers(context);
