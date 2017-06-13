@@ -48,7 +48,7 @@ void Viewer::execute(int argc, char* argv[]) {
      auto hl_fr = make_highlight_lines_fragment_shader();
      auto lb_te = make_tessellation_evaluation_shader("shaders/loop-box-spline.te.glsl");
      auto qp_te = make_tessellation_evaluation_shader("shaders/quintic-patch.te.glsl");
-     auto wf_gm = make_geometry_shader("shaders/solid-wireframe.g.glsl");
+     auto wf_gm = make_geometry_shader("shaders/wireframe.g.glsl");
      auto wf_fr = make_wireframe_fragment_shader();
 
      std::cout << "INFO: Making programs." << std::endl;
