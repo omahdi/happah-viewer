@@ -63,7 +63,7 @@ void Viewer::execute(int argc, char* argv[]) {
 
      std::cout << "INFO: Making vertex array." << std::endl;
 
-     auto position = make_attribute(0, 4, { GL_FLOAT, sizeof(Glfloat) });
+     auto position = make_attribute(0, 4, Types::FLOAT);
      auto array = make_vertex_array(position);
 
      std::cout << "INFO: Setting up scene." << std::endl;
