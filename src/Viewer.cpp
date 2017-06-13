@@ -63,7 +63,8 @@ void Viewer::execute(int argc, char* argv[]) {
 
      std::cout << "INFO: Making vertex array." << std::endl;
 
-     auto array = make_vertex_array(Position(0));
+     auto position = make_attribute(0, 4, Type::FLOAT);
+     auto array = make_vertex_array(position);
 
      std::cout << "INFO: Setting up scene." << std::endl;
 
