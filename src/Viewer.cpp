@@ -6,6 +6,7 @@
 #include <happah/format.h>
 #include <happah/geometries/converters.h>
 #include <happah/geometries/LoopBoxSplineMesh.h>
+#include <happah/geometries/TriangleArray.h>
 #include <happah/graphics.hpp>
 #include <happah/math/Space.h>
 #include <GLFW/glfw3.h>//NOTE: Glad must be included before GLFW.
@@ -33,6 +34,7 @@ void Viewer::execute(int argc, char* argv[]) {
 
      auto content = format::off::read(argv[1]);
      auto mesh = make_triangle_mesh<VertexP3>(content);
+     auto triangles = make_triangle_array(mesh);
      auto boxes = make_loop_box_spline_mesh(mesh);
      auto quartic = make_spline_surface(TriangleMesh<VertexP3, Format::DIRECTED_EDGE>(mesh));
      //auto mesh = make_triangle_mesh(quartic, 4);
@@ -54,12 +56,19 @@ void Viewer::execute(int argc, char* argv[]) {
      std::cout << "INFO: Making programs." << std::endl;
 
      auto qpp = make_patches_program("quintic spline surface", 21, sm_vx, qp_te, hl_fr);
-     auto qpc = make_render_context(quintic);
      auto tmp = make_triangles_program("triangle mesh", sm_vx, nm_gm, sm_fr);
-     auto tmc = make_render_context(mesh);
      auto lmp = make_patches_program("loop box spline mesh", 12, sm_vx, lb_te, nm_gm, sm_fr);
-     auto lmc = make_render_context(boxes);
      auto wfp = make_triangles_program("wireframe triangle mesh", sm_vx, wf_gm, wf_fr);
+
+     std::cout << "INFO: Making buffers." << std::endl;
+
+     auto bv0 = make_buffer(mesh.getVertices());
+     auto bv1 = make_buffer(quintic.getControlPoints());
+     auto bv2 = make_buffer(boxes.getControlPoints());
+     auto bv3 = make_buffer(triangles.getVertices());
+     auto bi0 = make_buffer(mesh.getIndices());
+     auto bi1 = make_buffer(std::get<1>(quintic.getPatches()));
+     auto bi2 = make_buffer(boxes.getIndices());
 
      std::cout << "INFO: Making vertex array." << std::endl;
 
@@ -102,14 +111,14 @@ void Viewer::execute(int argc, char* argv[]) {
           hl_fr.setBandWidth(1.0);
           hl_fr.setBeam(Point3D(tempOrigin) / tempOrigin.w, glm::normalize(Vector3D(tempDirection)));
           hl_fr.setLight(light);
-          render(qpp, array, qpc);*/
+          render(qpp, array, bi1, bv1);*/
 
           /*activate(tmp);
           sm_vx.setModelViewMatrix(viewMatrix);
           sm_vx.setProjectionMatrix(projectionMatrix);
           sm_fr.setLight(light);
           sm_fr.setModelColor(modelColor);
-          render(tmp, array, tmc);*/
+          render(tmp, array, bi0, bv0);*/
 
           activate(wfp);
           sm_vx.setModelViewMatrix(viewMatrix);
@@ -118,14 +127,14 @@ void Viewer::execute(int argc, char* argv[]) {
           wf_fr.setEdgeWidth(edgeWidth);
           wf_fr.setLight(light);
           wf_fr.setModelColor(modelColor);
-          render(wfp, array, tmc);
+          render(wfp, array, bi0, bv0);
 
           /*activate(lmp);
           sm_vx.setModelViewMatrix(viewMatrix);
           sm_vx.setProjectionMatrix(projectionMatrix);
           sm_fr.setLight(light);
           sm_fr.setModelColor(modelColor);
-          render(lmp, array, lmc);*/
+          render(lmp, array, bi2, bv2);*/
 
           glfwSwapBuffers(context);
      }
