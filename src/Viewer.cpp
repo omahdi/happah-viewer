@@ -10,6 +10,7 @@
 #include <happah/graphics.hpp>
 #include <happah/math/Space.h>
 #include <GLFW/glfw3.h>//NOTE: Glad must be included before GLFW.
+#include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 #include <stdexcept>
 
@@ -40,8 +41,6 @@ void Viewer::execute(int argc, char* argv[]) {
      //auto mesh = make_triangle_mesh(quartic, 4);
      auto quintic = elevate(quartic);
 
-     look_at(viewport, mesh.getVertices());
-
      std::cout << "INFO: Making shaders." << std::endl;
 
      auto sm_vx = make_simple_vertex_shader();
@@ -55,10 +54,10 @@ void Viewer::execute(int argc, char* argv[]) {
 
      std::cout << "INFO: Making programs." << std::endl;
 
-     auto qpp = make_patches_program("quintic spline surface", 21, sm_vx, qp_te, hl_fr);
-     auto tmp = make_triangles_program("triangle mesh", sm_vx, nm_gm, sm_fr);
-     auto lmp = make_patches_program("loop box spline mesh", 12, sm_vx, lb_te, nm_gm, sm_fr);
-     auto wfp = make_triangles_program("wireframe triangle mesh", sm_vx, wf_gm, wf_fr);
+     auto qpp = make_program("quintic spline surface", sm_vx, qp_te, hl_fr);
+     auto tmp = make_program("triangle mesh", sm_vx, nm_gm, sm_fr);
+     auto lmp = make_program("loop box spline mesh", sm_vx, lb_te, nm_gm, sm_fr);
+     auto wfp = make_program("wireframe triangle mesh", sm_vx, wf_gm, wf_fr);
 
      std::cout << "INFO: Making buffers." << std::endl;
 
@@ -70,23 +69,38 @@ void Viewer::execute(int argc, char* argv[]) {
      auto bi1 = make_buffer(std::get<1>(quintic.getPatches()));
      auto bi2 = make_buffer(boxes.getIndices());
 
-     std::cout << "INFO: Making vertex array." << std::endl;
+     std::cout << "INFO: Making vertex arrays." << std::endl;
 
-     auto position = make_attribute(0, 4, Types::FLOAT);
-     auto array = make_vertex_array(position);
+     auto position = make_attribute(0, 4, DataType::FLOAT);
+     auto edgeColor = make_attribute(1, 4, DataType::FLOAT);
+
+     auto va0 = make_vertex_array(position);
+     auto va1 = make_vertex_array(position);
+
+     describe(va1, 1, edgeColor);
+
+     std::cout << "INFO: Making render contexts." << std::endl;
+
+     auto rc0 = make_render_context(va0, bi0, PatchType::TRIANGLE);
+     auto rc1 = make_render_context(va0, bi1, PatchType::QUINTIC);
+     auto rc2 = make_render_context(va0, bi2, PatchType::LOOP_BOX_SPLINE);
+     auto rc3 = make_render_context(va0, PatchType::TRIANGLE);
 
      std::cout << "INFO: Setting up scene." << std::endl;
 
+     auto bandWidth = 1.0;
      auto beamDirection = Vector3D(0.0, 0.0, 1.0);
      auto beamOrigin = Point3D(10.0, 0.0, 0.0);
-     auto edgeColor = hpcolor(1, 0, 0, 1);
+     auto blue = hpcolor(0.0, 0.0, 1.0, 1.0);
      auto edgeWidth = 0.01;
+     auto green = hpcolor(0.0, 1.0, 0.0, 1.0);
      auto level0 = std::array<hpreal, 2>({ 100, 100 });
      auto level1 = std::array<hpreal, 4>({ 60, 60, 60, 60 });
-     auto modelColor = hpcolor(0, 0, 1, 1);
+     auto red = hpcolor(1.0, 0.0, 0.0, 1.0);
 
      std::cout << "INFO: Rendering scene." << std::endl;
 
+     look_at(viewport, mesh.getVertices());
      glClearColor(1, 1, 1, 1);
      while(!glfwWindowShouldClose(context)) {
           glfwPollEvents();
@@ -99,42 +113,55 @@ void Viewer::execute(int argc, char* argv[]) {
           auto tempDirection = viewMatrix * Vector4D(beamDirection, 0.0);
           auto tempOrigin = viewMatrix * Point4D(beamOrigin, 1.0);
 
-          activate(array);
+          activate(va0);
 
-          /*activate(qpp);
-          sm_vx.setModelViewMatrix(viewMatrix);
+          activate(qpp, PatchType::QUINTIC);
+          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(3.5, 0.0, 0.0)));
           sm_vx.setProjectionMatrix(projectionMatrix);
           TessellationControlShader::setInnerTessellationLevel(level0);
           TessellationControlShader::setOuterTessellationLevel(level1);
-          hl_fr.setBandColor0({ 1.0, 0.0, 0.0, 1.0 });
-          hl_fr.setBandColor1({ 0.0, 1.0, 0.0, 1.0 });
-          hl_fr.setBandWidth(1.0);
+          hl_fr.setBandColor0(red);
+          hl_fr.setBandColor1(green);
+          hl_fr.setBandWidth(bandWidth);
           hl_fr.setBeam(Point3D(tempOrigin) / tempOrigin.w, glm::normalize(Vector3D(tempDirection)));
           hl_fr.setLight(light);
-          render(qpp, array, bi1, bv1);*/
+          bind(va0, bv1);
+          render(qpp, rc1);
 
-          /*activate(tmp);
-          sm_vx.setModelViewMatrix(viewMatrix);
+          activate(tmp);
+          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-3.5, 0.0, 0.0)));
           sm_vx.setProjectionMatrix(projectionMatrix);
           sm_fr.setLight(light);
-          sm_fr.setModelColor(modelColor);
-          render(tmp, array, bi0, bv0);*/
+          sm_fr.setModelColor(blue);
+          bind(va0, bv0);
+          render(tmp, rc0);
+
+          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-3.5, -3.5, 0.0)));
+          sm_fr.setModelColor(red);
+          bind(va0, bv3);
+          render(tmp, rc3, size(triangles));
 
           activate(wfp);
           sm_vx.setModelViewMatrix(viewMatrix);
           sm_vx.setProjectionMatrix(projectionMatrix);
-          wf_fr.setEdgeColor(edgeColor);
+          wf_fr.setEdgeColor(red);
           wf_fr.setEdgeWidth(edgeWidth);
           wf_fr.setLight(light);
-          wf_fr.setModelColor(modelColor);
-          render(wfp, array, bi0, bv0);
+          wf_fr.setModelColor(blue);
+          bind(va0, bv0);
+          render(wfp, rc0);
 
-          /*activate(lmp);
-          sm_vx.setModelViewMatrix(viewMatrix);
+          activate(lmp, PatchType::LOOP_BOX_SPLINE);
+          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(0.0, -3.5, 0.0)));
           sm_vx.setProjectionMatrix(projectionMatrix);
           sm_fr.setLight(light);
-          sm_fr.setModelColor(modelColor);
-          render(lmp, array, bi2, bv2);*/
+          sm_fr.setModelColor(blue);
+          bind(va0, bv2);
+          render(lmp, rc2);
+
+          activate(va1);
+
+          //TODO
 
           glfwSwapBuffers(context);
      }
