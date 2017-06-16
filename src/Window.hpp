@@ -1,7 +1,10 @@
 // Copyright 2017
 //   Pawel Herman - Karlsruhe Institute of Technology - pherman@ira.uka.de
+//   Hedwig Amberg  - Karlsruhe Institute of Technology - hedwigdorothea@gmail.com
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+// 2017.06 - Hedwig Amberg    - Added scroll zoom.
 
 #pragma once
 
@@ -37,6 +40,8 @@ private:
      void onFramebufferSizeEvent(hpuint width, hpuint height);
 
      void onMouseButtonEvent(hpint button, hpint action, hpint mods);
+     
+     void onScrollEvent(double xoffset, double yoffset);
 
      void onWindowSizeEvent(hpuint width, hpuint height);
 
@@ -45,6 +50,8 @@ private:
      friend void onFramebufferSizeEvent(GLFWwindow* handle, int width, int height);
 
      friend void onMouseButtonEvent(GLFWwindow* handle, int button, int action, int mods);
+     
+     friend void onScrollEvent(GLFWwindow* handle, double xoffset, double yoffset);
 
      friend void onWindowSizeEvent(GLFWwindow* handle, int width, int height);
 
@@ -55,6 +62,8 @@ void onCursorPosEvent(GLFWwindow* handle, double x, double y);
 void onFramebufferSizeEvent(GLFWwindow* handle, int width, int height);
 
 void onMouseButtonEvent(GLFWwindow* handle, int button, int action, int mods);
+     
+void onScrollEvent(GLFWwindow* handle, double xoffset, double yoffset);
 
 void onWindowSizeEvent(GLFWwindow* handle, int width, int height);
 

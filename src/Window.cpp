@@ -1,7 +1,10 @@
 // Copyright 2017
 //   Pawel Herman - Karlsruhe Institute of Technology - pherman@ira.uka.de
+//   Hedwig Amberg  - Karlsruhe Institute of Technology - hedwigdorothea@gmail.com
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+// 2017.06 - Hedwig Amberg    - Added scroll zoom.
 
 #include <stdexcept>
 
@@ -18,6 +21,7 @@ Window::Window(hpuint width, hpuint height, const std::string& title)
      glfwSetCursorPosCallback(m_handle, happah::onCursorPosEvent);
      glfwSetFramebufferSizeCallback(m_handle, happah::onFramebufferSizeEvent);
      glfwSetMouseButtonCallback(m_handle, happah::onMouseButtonEvent);
+     glfwSetScrollCallback(m_handle, happah::onScrollEvent);
      glfwSetWindowSizeCallback(m_handle, happah::onWindowSizeEvent);
 }
 
@@ -47,6 +51,10 @@ void Window::onMouseButtonEvent(hpint button, hpint action, hpint mods) {
           m_y = m_viewport.getHeight() - m_y;
      }
 }
+     
+void Window::onScrollEvent(double xoffset, double yoffset){
+     m_viewport.zoom(yoffset * 0.01);
+}
 
 void Window::onWindowSizeEvent(hpuint width, hpuint height) { m_viewport.setSize(width, height); }
 
@@ -55,6 +63,8 @@ void onCursorPosEvent(GLFWwindow* handle, double x, double y) { Window::s_window
 void onFramebufferSizeEvent(GLFWwindow* handle, int width, int height) { Window::s_windows[handle]->onFramebufferSizeEvent(width, height); }
 
 void onMouseButtonEvent(GLFWwindow* handle, int button, int action, int mods) { Window::s_windows[handle]->onMouseButtonEvent(button, action, mods); }
+     
+void onScrollEvent(GLFWwindow* handle, double xoffset, double yoffset){ Window::s_windows[handle]->onScrollEvent(xoffset, yoffset); } 
 
 void onWindowSizeEvent(GLFWwindow* handle, int width, int height) { Window::s_windows[handle]->onWindowSizeEvent(width, height); }
 
