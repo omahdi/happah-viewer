@@ -40,6 +40,9 @@ void Viewer::execute(int argc, char* argv[]) {
      auto quartic = make_spline_surface(TriangleMesh<VertexP3, Format::DIRECTED_EDGE>(mesh));
      //auto mesh = make_triangle_mesh(quartic, 4);
      auto quintic = elevate(quartic);
+     auto edgeColors = std::vector<hpcolor>();
+
+     edgeColors.reserve(3 * size(triangles));
 
      std::cout << "INFO: Making shaders." << std::endl;
 
@@ -68,15 +71,18 @@ void Viewer::execute(int argc, char* argv[]) {
      auto bi0 = make_buffer(mesh.getIndices());
      auto bi1 = make_buffer(std::get<1>(quintic.getPatches()));
      auto bi2 = make_buffer(boxes.getIndices());
+     auto be3 = make_buffer(edgeColors);
 
      std::cout << "INFO: Making vertex arrays." << std::endl;
 
      auto position = make_attribute(0, 4, DataType::FLOAT);
      auto edgeColor = make_attribute(1, 4, DataType::FLOAT);
 
-     auto va0 = make_vertex_array(position);
-     auto va1 = make_vertex_array(position);
+     auto va0 = make_vertex_array();
+     auto va1 = make_vertex_array();
 
+     describe(va0, 0, position);
+     describe(va1, 0, position);
      describe(va1, 1, edgeColor);
 
      std::cout << "INFO: Making render contexts." << std::endl;
@@ -84,7 +90,8 @@ void Viewer::execute(int argc, char* argv[]) {
      auto rc0 = make_render_context(va0, bi0, PatchType::TRIANGLE);
      auto rc1 = make_render_context(va0, bi1, PatchType::QUINTIC);
      auto rc2 = make_render_context(va0, bi2, PatchType::LOOP_BOX_SPLINE);
-     auto rc3 = make_render_context(va0, PatchType::TRIANGLE);
+     auto rc30 = make_render_context(va0, PatchType::TRIANGLE);
+     auto rc31 = make_render_context(va1, PatchType::TRIANGLE);
 
      std::cout << "INFO: Setting up scene." << std::endl;
 
@@ -125,7 +132,7 @@ void Viewer::execute(int argc, char* argv[]) {
           hl_fr.setBandWidth(bandWidth);
           hl_fr.setBeam(Point3D(tempOrigin) / tempOrigin.w, glm::normalize(Vector3D(tempDirection)));
           hl_fr.setLight(light);
-          bind(va0, bv1);
+          bind(va0, 0, bv1);
           render(qpp, rc1);
 
           activate(tmp);
@@ -133,13 +140,13 @@ void Viewer::execute(int argc, char* argv[]) {
           sm_vx.setProjectionMatrix(projectionMatrix);
           sm_fr.setLight(light);
           sm_fr.setModelColor(blue);
-          bind(va0, bv0);
+          bind(va0, 0, bv0);
           render(tmp, rc0);
 
           sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-3.5, -3.5, 0.0)));
           sm_fr.setModelColor(red);
-          bind(va0, bv3);
-          render(tmp, rc3, size(triangles));
+          bind(va0, 0, bv3);
+          render(tmp, rc30, size(triangles));
 
           activate(wfp);
           sm_vx.setModelViewMatrix(viewMatrix);
@@ -148,7 +155,7 @@ void Viewer::execute(int argc, char* argv[]) {
           wf_fr.setEdgeWidth(edgeWidth);
           wf_fr.setLight(light);
           wf_fr.setModelColor(blue);
-          bind(va0, bv0);
+          bind(va0, 0, bv0);
           render(wfp, rc0);
 
           activate(lmp, PatchType::LOOP_BOX_SPLINE);
@@ -156,12 +163,15 @@ void Viewer::execute(int argc, char* argv[]) {
           sm_vx.setProjectionMatrix(projectionMatrix);
           sm_fr.setLight(light);
           sm_fr.setModelColor(blue);
-          bind(va0, bv2);
+          bind(va0, 0, bv2);
           render(lmp, rc2);
 
           activate(va1);
 
           //TODO
+          bind(va1, 0, bv3);
+          bind(va1, 1, be3);
+          //render(efp, rc31);
 
           glfwSwapBuffers(context);
      }
