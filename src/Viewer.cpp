@@ -123,6 +123,7 @@ void Viewer::execute(int argc, char* argv[]) {
           activate(va0);
 
           activate(qpp, PatchType::QUINTIC);
+          activate(bv1, va0, 0);
           sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(3.5, 0.0, 0.0)));
           sm_vx.setProjectionMatrix(projectionMatrix);
           TessellationControlShader::setInnerTessellationLevel(level0);
@@ -132,45 +133,44 @@ void Viewer::execute(int argc, char* argv[]) {
           hl_fr.setBandWidth(bandWidth);
           hl_fr.setBeam(Point3D(tempOrigin) / tempOrigin.w, glm::normalize(Vector3D(tempDirection)));
           hl_fr.setLight(light);
-          bind(va0, 0, bv1);
           render(qpp, rc1);
 
           activate(tmp);
+          activate(bv0, va0, 0);
           sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-3.5, 0.0, 0.0)));
           sm_vx.setProjectionMatrix(projectionMatrix);
           sm_fr.setLight(light);
           sm_fr.setModelColor(blue);
-          bind(va0, 0, bv0);
           render(tmp, rc0);
 
+          activate(bv3, va0, 0);
           sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-3.5, -3.5, 0.0)));
           sm_fr.setModelColor(red);
-          bind(va0, 0, bv3);
           render(tmp, rc30, size(triangles));
 
           activate(wfp);
+          activate(bv0, va0, 0);
           sm_vx.setModelViewMatrix(viewMatrix);
           sm_vx.setProjectionMatrix(projectionMatrix);
           wf_fr.setEdgeColor(red);
           wf_fr.setEdgeWidth(edgeWidth);
           wf_fr.setLight(light);
           wf_fr.setModelColor(blue);
-          bind(va0, 0, bv0);
           render(wfp, rc0);
 
           activate(lmp, PatchType::LOOP_BOX_SPLINE);
+          activate(bv2, va0, 0);
           sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(0.0, -3.5, 0.0)));
           sm_vx.setProjectionMatrix(projectionMatrix);
           sm_fr.setLight(light);
           sm_fr.setModelColor(blue);
-          bind(va0, 0, bv2);
           render(lmp, rc2);
 
           activate(va1);
 
           //TODO
-          bind(va1, 0, bv3);
-          bind(va1, 1, be3);
+          activate(bv3, va1, 0);
+          activate(be3, va1, 1);
           //render(efp, rc31);
 
           glfwSwapBuffers(context);
