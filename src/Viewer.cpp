@@ -46,20 +46,23 @@ void Viewer::execute(int argc, char* argv[]) {
 
      std::cout << "INFO: Making shaders." << std::endl;
 
-     auto sm_vx = make_simple_vertex_shader();
-     auto nm_gm = make_geometry_shader("shaders/normals.g.glsl");
-     auto sm_fr = make_simple_fragment_shader();
      auto hl_fr = make_highlight_lines_fragment_shader();
      auto lb_te = make_tessellation_evaluation_shader("shaders/loop-box-spline.te.glsl");
+     auto nm_gm = make_geometry_shader("shaders/normals.g.glsl");
      auto qp_te = make_tessellation_evaluation_shader("shaders/quintic-patch.te.glsl");
-     auto wf_gm = make_geometry_shader("shaders/wireframe.g.glsl");
+     auto si_fr = make_sphere_impostor_fragment_shader();
+     auto si_gm = make_sphere_impostor_geometry_shader();
+     auto sm_fr = make_simple_fragment_shader();
+     auto sm_vx = make_simple_vertex_shader();
      auto wf_fr = make_wireframe_fragment_shader();
+     auto wf_gm = make_geometry_shader("shaders/wireframe.g.glsl");
 
      std::cout << "INFO: Making programs." << std::endl;
 
-     auto qpp = make_program("quintic spline surface", sm_vx, qp_te, hl_fr);
-     auto tmp = make_program("triangle mesh", sm_vx, nm_gm, sm_fr);
      auto lmp = make_program("loop box spline mesh", sm_vx, lb_te, nm_gm, sm_fr);
+     auto qpp = make_program("quintic spline surface", sm_vx, qp_te, hl_fr);
+     auto sip = make_program("point cloud", sm_vx, si_gm, si_fr);
+     auto tmp = make_program("triangle mesh", sm_vx, nm_gm, sm_fr);
      auto wfp = make_program("wireframe triangle mesh", sm_vx, wf_gm, wf_fr);
 
      std::cout << "INFO: Making buffers." << std::endl;
@@ -92,6 +95,7 @@ void Viewer::execute(int argc, char* argv[]) {
      auto rc2 = make_render_context(va0, bi2, PatchType::LOOP_BOX_SPLINE);
      auto rc30 = make_render_context(va0, PatchType::TRIANGLE);
      auto rc31 = make_render_context(va1, PatchType::TRIANGLE);
+     auto rc4 = make_render_context(va0, PatchType::POINT);
 
      std::cout << "INFO: Setting up scene." << std::endl;
 
@@ -103,6 +107,7 @@ void Viewer::execute(int argc, char* argv[]) {
      auto green = hpcolor(0.0, 1.0, 0.0, 1.0);
      auto level0 = std::array<hpreal, 2>({ 100, 100 });
      auto level1 = std::array<hpreal, 4>({ 60, 60, 60, 60 });
+     auto radius = 0.05;
      auto red = hpcolor(1.0, 0.0, 0.0, 1.0);
 
      std::cout << "INFO: Rendering scene." << std::endl;
@@ -165,6 +170,18 @@ void Viewer::execute(int argc, char* argv[]) {
           sm_fr.setLight(light);
           sm_fr.setModelColor(blue);
           render(lmp, rc2);
+
+          activate(sip);
+          activate(bv0, va0, 0);
+          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(3.5, -3.5, 0.0)));
+          sm_vx.setProjectionMatrix(projectionMatrix);
+          si_gm.setProjectionMatrix(projectionMatrix);
+          si_gm.setRadius(radius);
+          si_fr.setLight(light);
+          si_fr.setModelColor(blue);
+          si_fr.setProjectionMatrix(projectionMatrix);
+          si_fr.setRadius(radius);
+          render(sip, rc4, mesh.getNumberOfVertices());
 
           activate(va1);
 
