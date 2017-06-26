@@ -61,7 +61,7 @@ void Viewer::execute(int argc, char* argv[]) {
 
      auto lmp = make_program("loop box spline mesh", sm_vx, lb_te, nm_gm, sm_fr);
      auto qpp = make_program("quintic spline surface", sm_vx, qp_te, hl_fr);
-     auto sip = make_program("point cloud", sm_vx, si_gm, si_fr);
+     auto pcp = make_program("point cloud", sm_vx, si_gm, si_fr);
      auto tmp = make_program("triangle mesh", sm_vx, nm_gm, sm_fr);
      auto wfp = make_program("wireframe triangle mesh", sm_vx, wf_gm, wf_fr);
 
@@ -171,7 +171,7 @@ void Viewer::execute(int argc, char* argv[]) {
           sm_fr.setModelColor(blue);
           render(lmp, rc2);
 
-          activate(sip);
+          activate(pcp);
           activate(bv0, va0, 0);
           sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(3.5, -3.5, 0.0)));
           sm_vx.setProjectionMatrix(projectionMatrix);
@@ -181,7 +181,7 @@ void Viewer::execute(int argc, char* argv[]) {
           si_fr.setModelColor(blue);
           si_fr.setProjectionMatrix(projectionMatrix);
           si_fr.setRadius(radius);
-          render(sip, rc4, mesh.getNumberOfVertices());
+          render(pcp, rc4, mesh.getNumberOfVertices());
 
           activate(va1);
 
