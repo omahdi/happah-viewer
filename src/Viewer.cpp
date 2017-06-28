@@ -35,14 +35,15 @@ void Viewer::execute(int argc, char* argv[]) {
 
      auto content = format::off::read(argv[1]);
      auto mesh = make_triangle_mesh<VertexP3>(content);
+     auto graph = TriangleMesh<VertexP3, Format::DIRECTED_EDGE>(mesh);
+     auto edgeColors = std::vector<hpcolor>(3 * size(mesh), hpcolor(0.0, 0.0, 1.0, 1.0));
      auto triangles = make_triangle_array(mesh);
      auto boxes = make_loop_box_spline_mesh(mesh);
      auto quartic = make_spline_surface(TriangleMesh<VertexP3, Format::DIRECTED_EDGE>(mesh));
      //auto mesh = make_triangle_mesh(quartic, 4);
      auto quintic = elevate(quartic);
-     auto edgeColors = std::vector<hpcolor>();
 
-     edgeColors.reserve(3 * size(triangles));
+     for(auto e : trim(graph, cut(graph))) edgeColors[e] = hpcolor(1.0, 0.0, 0.0, 1.0);
 
      std::cout << "INFO: Making shaders." << std::endl;
 
@@ -56,6 +57,7 @@ void Viewer::execute(int argc, char* argv[]) {
      auto sm_vx = make_simple_vertex_shader();
      auto wf_fr = make_wireframe_fragment_shader();
      auto wf_gm = make_geometry_shader("shaders/wireframe.g.glsl");
+     auto wf_vx = make_wireframe_vertex_shader();
 
      std::cout << "INFO: Making programs." << std::endl;
 
@@ -63,7 +65,7 @@ void Viewer::execute(int argc, char* argv[]) {
      auto qpp = make_program("quintic spline surface", sm_vx, qp_te, hl_fr);
      auto pcp = make_program("point cloud", sm_vx, si_gm, si_fr);
      auto tmp = make_program("triangle mesh", sm_vx, nm_gm, sm_fr);
-     auto wfp = make_program("wireframe triangle mesh", sm_vx, wf_gm, wf_fr);
+     auto wfp = make_program("wireframe triangle mesh", wf_vx, wf_gm, wf_fr);
 
      std::cout << "INFO: Making buffers." << std::endl;
 
@@ -103,7 +105,7 @@ void Viewer::execute(int argc, char* argv[]) {
      auto beamDirection = Vector3D(0.0, 0.0, 1.0);
      auto beamOrigin = Point3D(10.0, 0.0, 0.0);
      auto blue = hpcolor(0.0, 0.0, 1.0, 1.0);
-     auto edgeWidth = 0.01;
+     auto edgeWidth = 0.02;
      auto green = hpcolor(0.0, 1.0, 0.0, 1.0);
      auto level0 = std::array<hpreal, 2>({ 100, 100 });
      auto level1 = std::array<hpreal, 4>({ 60, 60, 60, 60 });
@@ -153,16 +155,6 @@ void Viewer::execute(int argc, char* argv[]) {
           sm_fr.setModelColor(red);
           render(tmp, rc30, size(triangles));
 
-          activate(wfp);
-          activate(bv0, va0, 0);
-          sm_vx.setModelViewMatrix(viewMatrix);
-          sm_vx.setProjectionMatrix(projectionMatrix);
-          wf_fr.setEdgeColor(red);
-          wf_fr.setEdgeWidth(edgeWidth);
-          wf_fr.setLight(light);
-          wf_fr.setModelColor(blue);
-          render(wfp, rc0);
-
           activate(lmp, PatchType::LOOP_BOX_SPLINE);
           activate(bv2, va0, 0);
           sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(0.0, -3.5, 0.0)));
@@ -185,10 +177,16 @@ void Viewer::execute(int argc, char* argv[]) {
 
           activate(va1);
 
-          //TODO
+          activate(wfp);
           activate(bv3, va1, 0);
           activate(be3, va1, 1);
-          //render(efp, rc31);
+          wf_vx.setModelViewMatrix(viewMatrix);
+          wf_vx.setProjectionMatrix(projectionMatrix);
+          wf_fr.setEdgeColor(red);
+          wf_fr.setEdgeWidth(edgeWidth);
+          wf_fr.setLight(light);
+          wf_fr.setModelColor(blue);
+          render(wfp, rc31, size(triangles));
 
           glfwSwapBuffers(context);
      }
