@@ -155,6 +155,7 @@ void Viewer::execute(int argc, char* argv[]) {
           }
 
           if (m_window.enabled(Window::RenderToggle::SOLID_TRIS)) {
+               activate(tmp);
                activate(bv3, va0, 0);
                sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-3.5, -3.5, 0.0)));
                sm_fr.setModelColor(red);
