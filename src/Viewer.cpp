@@ -56,15 +56,6 @@ void Viewer::execute(int argc, char* argv[]) {
 
      auto content = format::off::read(argv[1]);
      auto mesh = make_triangle_mesh<VertexP3>(content);
-     TriangleMesh<VertexP3> cut_mesh, disk_mesh;
-     if (argc >= 4) {
-          std::cout << "INFO: Reading additional mesh instances (disk topology, embedded mesh)\n";
-          cut_mesh = make_triangle_mesh<VertexP3>(format::off::read(argv[2]));
-          disk_mesh = make_triangle_mesh<VertexP3>(format::off::read(argv[3]));
-          if (cut_mesh.getNumberOfVertices() != disk_mesh.getNumberOfVertices())
-               throw std::runtime_error("Expected mesh instances with matching number of vertices");
-          have_disk_mesh = true;
-     }
      auto graph = TriangleMesh<VertexP3, Format::DIRECTED_EDGE>(mesh);
      auto edgeColors = std::vector<hpcolor>(3 * size(mesh), blue);
      auto vertexColors = std::vector<hpcolor>(3 * size(mesh), blue);
@@ -144,6 +135,16 @@ void Viewer::execute(int argc, char* argv[]) {
      auto rc31 = make_render_context(va1, PatchType::TRIANGLE);
      auto rc4 = make_render_context(va0, PatchType::POINT);
 
+     bool have_disk_mesh {false};
+     TriangleMesh<VertexP3> cut_mesh, disk_mesh;
+     if (argc >= 4) {
+          std::cout << "INFO: Reading additional mesh instances (disk topology, embedded mesh)\n";
+          cut_mesh = make_triangle_mesh<VertexP3>(format::off::read(argv[2]));
+          disk_mesh = make_triangle_mesh<VertexP3>(format::off::read(argv[3]));
+          if (cut_mesh.getNumberOfVertices() != disk_mesh.getNumberOfVertices())
+               throw std::runtime_error("Expected mesh instances with matching number of vertices");
+          have_disk_mesh = true;
+     }
      std::cout << "INFO: setting up checkerboard shaders and buffers.\n";
      auto cb_vx = make_checkerboard_vertex_shader();
      auto cb_gm = make_checkerboard_geometry_shader();
