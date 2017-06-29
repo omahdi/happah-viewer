@@ -52,8 +52,19 @@ void Viewer::execute(int argc, char* argv[]) {
      auto red = hpcolor(1.0, 0.0, 0.0, 1.0);
      auto blue = hpcolor(0.0, 0.0, 1.0, 1.0);
      
+     bool have_disk_mesh {false};
+
      auto content = format::off::read(argv[1]);
      auto mesh = make_triangle_mesh<VertexP3>(content);
+     TriangleMesh<VertexP3> cut_mesh, disk_mesh;
+     if (argc >= 4) {
+          std::cout << "INFO: Reading additional mesh instances (disk topology, embedded mesh)\n";
+          cut_mesh = make_triangle_mesh<VertexP3>(format::off::read(argv[2]));
+          disk_mesh = make_triangle_mesh<VertexP3>(format::off::read(argv[3]));
+          if (cut_mesh.getNumberOfVertices() != disk_mesh.getNumberOfVertices())
+               throw std::runtime_error("Expected mesh instances with matching number of vertices");
+          have_disk_mesh = true;
+     }
      auto graph = TriangleMesh<VertexP3, Format::DIRECTED_EDGE>(mesh);
      auto edgeColors = std::vector<hpcolor>(3 * size(mesh), blue);
      auto vertexColors = std::vector<hpcolor>(3 * size(mesh), blue);
@@ -132,6 +143,21 @@ void Viewer::execute(int argc, char* argv[]) {
      auto rc30 = make_render_context(va0, PatchType::TRIANGLE);
      auto rc31 = make_render_context(va1, PatchType::TRIANGLE);
      auto rc4 = make_render_context(va0, PatchType::POINT);
+
+     std::cout << "INFO: setting up checkerboard shaders and buffers.\n";
+     auto cb_vx = make_checkerboard_vertex_shader();
+     auto cb_gm = make_checkerboard_geometry_shader();
+     auto cb_fr = make_checkerboard_fragment_shader();
+     auto cbp = make_program("checkerboard pattern", cb_vx, cb_gm, cb_fr);
+     auto bv_disktopo = make_buffer(cut_mesh.getVertices());
+     auto bi_disktopo = make_buffer(cut_mesh.getIndices());
+     auto bv_hypcoord = make_buffer(disk_mesh.getVertices());
+     auto va_chkb = make_vertex_array();
+     auto attr_cb_position = make_attribute(0, 4, DataType::FLOAT);
+     auto attr_cb_hyp_coord = make_attribute(1, 3, DataType::FLOAT);
+     describe(va_chkb, 0, attr_cb_position);
+     describe(va_chkb, 1, attr_cb_hyp_coord);
+     auto rc_chkb = make_render_context(va_chkb, bi_disktopo, PatchType::TRIANGLE);
 
      std::cout << "INFO: Setting up scene." << std::endl;
 
@@ -222,6 +248,20 @@ void Viewer::execute(int argc, char* argv[]) {
           wf_fr.setLight(light);
           wf_fr.setModelColor(blue);
           render(wfp, rc31, size(triangles));
+
+          if (have_disk_mesh) {
+               activate(va_chkb);
+               activate(cbp);
+               activate(bv_disktopo, va_chkb, 0);
+               activate(bv_hypcoord, va_chkb, 1);
+               cb_vx.setModelViewMatrix(viewMatrix);
+               cb_vx.setProjectionMatrix(projectionMatrix);
+               cb_fr.setColors(hpcolor(0.0, 0.0, 0.0, 1.0), hpcolor(1.0, 1.0, 1.0, 1.0));
+               cb_fr.setPeriod(hpvec2(0.05, 0.05));
+               cb_fr.setLight(light);
+               render(cbp, rc_chkb);
+
+          }
 
           glfwSwapBuffers(context);
      }
