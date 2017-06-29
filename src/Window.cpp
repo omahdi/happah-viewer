@@ -23,6 +23,8 @@ Window::Window(hpuint width, hpuint height, const std::string& title)
      glfwSetMouseButtonCallback(m_handle, happah::onMouseButtonEvent);
      glfwSetScrollCallback(m_handle, happah::onScrollEvent);
      glfwSetWindowSizeCallback(m_handle, happah::onWindowSizeEvent);
+     glfwSetKeyCallback(m_handle, happah::onKeyEvent);
+     toggle(RenderToggle::WIREFRAME);
 }
 
 Window::~Window() {
@@ -58,6 +60,22 @@ void Window::onScrollEvent(double xoffset, double yoffset){
 
 void Window::onWindowSizeEvent(hpuint width, hpuint height) { m_viewport.setSize(width, height); }
 
+void Window::onKeyEvent(int key, int scancode, int action, int mods) {
+     if (action == GLFW_PRESS) {
+          switch (key) {
+               case GLFW_KEY_ESCAPE: set_quit_flag(); break;
+               case GLFW_KEY_0: clear_render_toggles(); break;
+               case GLFW_KEY_1: toggle(RenderToggle::QUINTIC); break;
+               case GLFW_KEY_2: toggle(RenderToggle::LOOP_BOX_SPLINE); break;
+               case GLFW_KEY_3: toggle(RenderToggle::SOLID_MESH);break;
+               case GLFW_KEY_4: toggle(RenderToggle::SOLID_TRIS);break;
+               case GLFW_KEY_5: toggle(RenderToggle::POINT_CLOUD); break;
+               case GLFW_KEY_6: toggle(RenderToggle::WIREFRAME); break;
+               case GLFW_KEY_7: toggle(RenderToggle::CHECKERBOARD); break;
+          }
+     }
+}
+
 void onCursorPosEvent(GLFWwindow* handle, double x, double y) { Window::s_windows[handle]->onCursorPosEvent(x, y); }
 
 void onFramebufferSizeEvent(GLFWwindow* handle, int width, int height) { Window::s_windows[handle]->onFramebufferSizeEvent(width, height); }
@@ -68,5 +86,8 @@ void onScrollEvent(GLFWwindow* handle, double xoffset, double yoffset){ Window::
 
 void onWindowSizeEvent(GLFWwindow* handle, int width, int height) { Window::s_windows[handle]->onWindowSizeEvent(width, height); }
 
+void onKeyEvent(GLFWwindow* handle, int key, int scancode, int action, int mods) {
+     Window::s_windows[handle]->onKeyEvent(key, scancode, action, mods);
+}
 }//namespace happah
 

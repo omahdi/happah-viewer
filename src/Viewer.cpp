@@ -116,7 +116,7 @@ void Viewer::execute(int argc, char* argv[]) {
 
      look_at(viewport, mesh.getVertices());
      glClearColor(1, 1, 1, 1);
-     while(!glfwWindowShouldClose(context)) {
+     while(!glfwWindowShouldClose(context) && !m_window.quit_flag()) {
           glfwPollEvents();
           glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
           glEnable(GL_DEPTH_TEST);
@@ -129,64 +129,75 @@ void Viewer::execute(int argc, char* argv[]) {
 
           activate(va0);
 
-          activate(qpp, PatchType::QUINTIC);
-          activate(bv1, va0, 0);
-          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(3.5, 0.0, 0.0)));
-          sm_vx.setProjectionMatrix(projectionMatrix);
-          TessellationControlShader::setInnerTessellationLevel(level0);
-          TessellationControlShader::setOuterTessellationLevel(level1);
-          hl_fr.setBandColor0(red);
-          hl_fr.setBandColor1(green);
-          hl_fr.setBandWidth(bandWidth);
-          hl_fr.setBeam(Point3D(tempOrigin) / tempOrigin.w, glm::normalize(Vector3D(tempDirection)));
-          hl_fr.setLight(light);
-          render(qpp, rc1);
+          if (m_window.enabled(Window::RenderToggle::QUINTIC)) {
+               activate(qpp, PatchType::QUINTIC);
+               activate(bv1, va0, 0);
+               sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(3.5, 0.0, 0.0)));
+               sm_vx.setProjectionMatrix(projectionMatrix);
+               TessellationControlShader::setInnerTessellationLevel(level0);
+               TessellationControlShader::setOuterTessellationLevel(level1);
+               hl_fr.setBandColor0(red);
+               hl_fr.setBandColor1(green);
+               hl_fr.setBandWidth(bandWidth);
+               hl_fr.setBeam(Point3D(tempOrigin) / tempOrigin.w, glm::normalize(Vector3D(tempDirection)));
+               hl_fr.setLight(light);
+               render(qpp, rc1);
+          }
 
-          activate(tmp);
-          activate(bv0, va0, 0);
-          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-3.5, 0.0, 0.0)));
-          sm_vx.setProjectionMatrix(projectionMatrix);
-          sm_fr.setLight(light);
-          sm_fr.setModelColor(blue);
-          render(tmp, rc0);
+          if (m_window.enabled(Window::RenderToggle::SOLID_MESH)) {
+               activate(tmp);
+               activate(bv0, va0, 0);
+               sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-3.5, 0.0, 0.0)));
+               sm_vx.setProjectionMatrix(projectionMatrix);
+               sm_fr.setLight(light);
+               sm_fr.setModelColor(blue);
+               render(tmp, rc0);
+          }
 
-          activate(bv3, va0, 0);
-          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-3.5, -3.5, 0.0)));
-          sm_fr.setModelColor(red);
-          render(tmp, rc30, size(triangles));
+          if (m_window.enabled(Window::RenderToggle::SOLID_TRIS)) {
+               activate(bv3, va0, 0);
+               sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-3.5, -3.5, 0.0)));
+               sm_fr.setModelColor(red);
+               render(tmp, rc30, size(triangles));
+          }
 
-          activate(lmp, PatchType::LOOP_BOX_SPLINE);
-          activate(bv2, va0, 0);
-          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(0.0, -3.5, 0.0)));
-          sm_vx.setProjectionMatrix(projectionMatrix);
-          sm_fr.setLight(light);
-          sm_fr.setModelColor(blue);
-          render(lmp, rc2);
+          if (m_window.enabled(Window::RenderToggle::LOOP_BOX_SPLINE)) {
+               activate(lmp, PatchType::LOOP_BOX_SPLINE);
+               activate(bv2, va0, 0);
+               sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(0.0, -3.5, 0.0)));
+               sm_vx.setProjectionMatrix(projectionMatrix);
+               sm_fr.setLight(light);
+               sm_fr.setModelColor(blue);
+               render(lmp, rc2);
+          }
 
-          activate(pcp);
-          activate(bv0, va0, 0);
-          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(3.5, -3.5, 0.0)));
-          sm_vx.setProjectionMatrix(projectionMatrix);
-          si_gm.setProjectionMatrix(projectionMatrix);
-          si_gm.setRadius(radius);
-          si_fr.setLight(light);
-          si_fr.setModelColor(blue);
-          si_fr.setProjectionMatrix(projectionMatrix);
-          si_fr.setRadius(radius);
-          render(pcp, rc4, mesh.getNumberOfVertices());
+          if (m_window.enabled(Window::RenderToggle::POINT_CLOUD)) {
+               activate(pcp);
+               activate(bv0, va0, 0);
+               sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(3.5, -3.5, 0.0)));
+               sm_vx.setProjectionMatrix(projectionMatrix);
+               si_gm.setProjectionMatrix(projectionMatrix);
+               si_gm.setRadius(radius);
+               si_fr.setLight(light);
+               si_fr.setModelColor(blue);
+               si_fr.setProjectionMatrix(projectionMatrix);
+               si_fr.setRadius(radius);
+               render(pcp, rc4, mesh.getNumberOfVertices());
+          }
 
-          activate(va1);
-
-          activate(wfp);
-          activate(bv3, va1, 0);
-          activate(be3, va1, 1);
-          wf_vx.setModelViewMatrix(viewMatrix);
-          wf_vx.setProjectionMatrix(projectionMatrix);
-          wf_fr.setEdgeColor(red);
-          wf_fr.setEdgeWidth(edgeWidth);
-          wf_fr.setLight(light);
-          wf_fr.setModelColor(blue);
-          render(wfp, rc31, size(triangles));
+          if (m_window.enabled(Window::RenderToggle::WIREFRAME)) {
+               activate(va1);
+               activate(wfp);
+               activate(bv3, va1, 0);
+               activate(be3, va1, 1);
+               wf_vx.setModelViewMatrix(viewMatrix);
+               wf_vx.setProjectionMatrix(projectionMatrix);
+               wf_fr.setEdgeColor(red);
+               wf_fr.setEdgeWidth(edgeWidth);
+               wf_fr.setLight(light);
+               wf_fr.setModelColor(blue);
+               render(wfp, rc31, size(triangles));
+          }
 
           glfwSwapBuffers(context);
      }

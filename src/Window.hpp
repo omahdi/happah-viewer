@@ -19,6 +19,38 @@ namespace happah {
 
 class Window {
 public:
+     enum class RenderToggle {
+          _NIL = 0,
+          QUINTIC,
+          LOOP_BOX_SPLINE,
+          SOLID_MESH,
+          SOLID_TRIS,
+          POINT_CLOUD,
+          WIREFRAME,
+          CHECKERBOARD,
+          _COUNT
+     };
+     static_assert(static_cast<int>(RenderToggle::_COUNT) <= 32);
+
+     void toggle(RenderToggle _what) {
+          assert(_what > RenderToggle::_NIL && _what < RenderToggle::_COUNT);
+          m_render_toggle ^= (1 << static_cast<int>(_what));
+     }
+     bool enabled(RenderToggle _what) const {
+          assert(_what > RenderToggle::_NIL && _what < RenderToggle::_COUNT);
+          return (m_render_toggle & (1 << static_cast<int>(_what))) != 0;
+     }
+     void clear_render_toggles() {
+          m_render_toggle = 0;
+     }
+     void set_render_toggles() {
+          clear_render_toggles();
+          m_render_toggle = ~m_render_toggle;
+     }
+     void set_quit_flag() { m_quit_flag = true; }
+     void clear_quit_flag() { m_quit_flag = false; }
+     bool quit_flag() const { return m_quit_flag; }
+
      Window(hpuint width, hpuint height, const std::string& title);
 
      ~Window();
@@ -34,6 +66,8 @@ private:
      Viewport m_viewport;
      double m_x;//mouse coordinates
      double m_y;
+     bool m_quit_flag {false};
+     std::uint32_t m_render_toggle {0};
 
      void onCursorPosEvent(double x, double y);
 
@@ -45,6 +79,8 @@ private:
 
      void onWindowSizeEvent(hpuint width, hpuint height);
 
+     void onKeyEvent(int key, int scancode, int action, int mods);
+
      friend void onCursorPosEvent(GLFWwindow* handle, double x, double y);
 
      friend void onFramebufferSizeEvent(GLFWwindow* handle, int width, int height);
@@ -55,6 +91,7 @@ private:
 
      friend void onWindowSizeEvent(GLFWwindow* handle, int width, int height);
 
+     friend void onKeyEvent(GLFWwindow* handle, int key, int scancode, int action, int mods);
 };//class Window
 
 void onCursorPosEvent(GLFWwindow* handle, double x, double y);
@@ -67,4 +104,5 @@ void onScrollEvent(GLFWwindow* handle, double xoffset, double yoffset);
 
 void onWindowSizeEvent(GLFWwindow* handle, int width, int height);
 
+void onKeyEvent(GLFWwindow* handle, int key, int scancode, int action, int mods);
 }//namespace happah
