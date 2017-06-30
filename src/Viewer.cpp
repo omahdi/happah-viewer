@@ -52,40 +52,43 @@ void Viewer::execute(int argc, char* argv[]) {
      auto red = hpcolor(1.0, 0.0, 0.0, 1.0);
      auto blue = hpcolor(0.0, 0.0, 1.0, 1.0);
      
-     bool have_disk_mesh {false};
-
      auto content = format::off::read(argv[1]);
      auto mesh = make_triangle_mesh<VertexP3>(content);
      auto graph = TriangleMesh<VertexP3, Format::DIRECTED_EDGE>(mesh);
      auto edgeColors = std::vector<hpcolor>(3 * size(mesh), blue);
      auto vertexColors = std::vector<hpcolor>(3 * size(mesh), blue);
      auto triangles = make_triangle_array(mesh);
-     auto boxes = make_loop_box_spline_mesh(mesh);
-     auto quartic = make_spline_surface(TriangleMesh<VertexP3, Format::DIRECTED_EDGE>(mesh));
-     //auto mesh = make_triangle_mesh(quartic, 4);
-     auto quintic = elevate(quartic);
 
-     for(auto e : trim(graph, cut(graph))){
-          edgeColors[e] = red;
-          visit_spokes(graph.getEdges(), e, [&](auto e) {
-               static constexpr hpuint o[3] = { 1, 2, 0 };
-               
-               auto f = graph.getEdge(e).opposite;
-               auto t = make_triangle_index(f);
-               auto i = make_edge_offset(f);
-               vertexColors[3 * t + o[i]] = red;
-               vertexColors[e] = red;
-          });
+     bool have_disk_mesh {false};
+     TriangleMesh<VertexP3> disk_mesh;
+     if (argc >= 3) {
+          std::cout << "INFO: Reading additional mesh instance (disk topology)\n";
+          disk_mesh = make_triangle_mesh<VertexP3>(format::off::read(argv[2]));
+          if (mesh.getNumberOfVertices() != disk_mesh.getNumberOfVertices())
+               throw std::runtime_error("Expected mesh instances with matching number of vertices");
+          have_disk_mesh = true;
+          // Iterate over boundary edges and color their opposites
+          for (auto ei = 3*graph.getNumberOfTriangles(), num_edges = graph.getNumberOfEdges(); ei < num_edges; ei++)
+               edgeColors[graph.getEdge(ei).opposite] = red;
+     } else {
+          // Compute reduced cut locus (based on Dijkstra's algorithm on dual graph)
+          for(auto e : trim(graph, cut(graph))){
+               edgeColors[e] = red;
+               visit_spokes(graph.getEdges(), e, [&](auto e) {
+                    static constexpr hpuint o[3] = { 1, 2, 0 };
+                    
+                    auto f = graph.getEdge(e).opposite;
+                    auto t = make_triangle_index(f);
+                    auto i = make_edge_offset(f);
+                    vertexColors[3 * t + o[i]] = red;
+                    vertexColors[e] = red;
+               });
+          }
      }
-     
+
      std::cout << "INFO: Making shaders." << std::endl;
 
-     auto hl_fr = make_highlight_lines_fragment_shader();
-     auto lb_te = make_tessellation_evaluation_shader("shaders/loop-box-spline.te.glsl");
      auto nm_gm = make_geometry_shader("shaders/normals.g.glsl");
-     auto qp_te = make_tessellation_evaluation_shader("shaders/quintic-patch.te.glsl");
-     auto si_fr = make_sphere_impostor_fragment_shader();
-     auto si_gm = make_sphere_impostor_geometry_shader();
      auto sm_fr = make_simple_fragment_shader();
      auto sm_vx = make_simple_vertex_shader();
      auto wf_fr = make_wireframe_fragment_shader();
@@ -94,21 +97,14 @@ void Viewer::execute(int argc, char* argv[]) {
 
      std::cout << "INFO: Making programs." << std::endl;
 
-     auto lmp = make_program("loop box spline mesh", sm_vx, lb_te, nm_gm, sm_fr);
-     auto qpp = make_program("quintic spline surface", sm_vx, qp_te, hl_fr);
-     auto pcp = make_program("point cloud", sm_vx, si_gm, si_fr);
      auto tmp = make_program("triangle mesh", sm_vx, nm_gm, sm_fr);
      auto wfp = make_program("wireframe triangle mesh", wf_vx, wf_gm, wf_fr);
 
      std::cout << "INFO: Making buffers." << std::endl;
 
      auto bv0 = make_buffer(mesh.getVertices());
-     auto bv1 = make_buffer(quintic.getControlPoints());
-     auto bv2 = make_buffer(boxes.getControlPoints());
      auto bv3 = make_buffer(triangles.getVertices());
      auto bi0 = make_buffer(mesh.getIndices());
-     auto bi1 = make_buffer(std::get<1>(quintic.getPatches()));
-     auto bi2 = make_buffer(boxes.getIndices());
      auto be3 = make_buffer(edgeColors);
      auto bc3 = make_buffer(vertexColors);
 
@@ -118,47 +114,28 @@ void Viewer::execute(int argc, char* argv[]) {
      auto edgeColor = make_attribute(1, 4, DataType::FLOAT);
      auto vertexColor = make_attribute(2, 4, DataType::FLOAT);
 
-     auto va0 = make_vertex_array();
      auto va1 = make_vertex_array();
 
-     describe(va0, 0, position);
      describe(va1, 0, position);
      describe(va1, 1, edgeColor);
      describe(va1, 2, vertexColor);
 
      std::cout << "INFO: Making render contexts." << std::endl;
 
-     auto rc0 = make_render_context(va0, bi0, PatchType::TRIANGLE);
-     auto rc1 = make_render_context(va0, bi1, PatchType::QUINTIC);
-     auto rc2 = make_render_context(va0, bi2, PatchType::LOOP_BOX_SPLINE);
-     auto rc30 = make_render_context(va0, PatchType::TRIANGLE);
      auto rc31 = make_render_context(va1, PatchType::TRIANGLE);
-     auto rc4 = make_render_context(va0, PatchType::POINT);
 
-     bool have_disk_mesh {false};
-     TriangleMesh<VertexP3> cut_mesh, disk_mesh;
-     if (argc >= 4) {
-          std::cout << "INFO: Reading additional mesh instances (disk topology, embedded mesh)\n";
-          cut_mesh = make_triangle_mesh<VertexP3>(format::off::read(argv[2]));
-          disk_mesh = make_triangle_mesh<VertexP3>(format::off::read(argv[3]));
-          if (cut_mesh.getNumberOfVertices() != disk_mesh.getNumberOfVertices())
-               throw std::runtime_error("Expected mesh instances with matching number of vertices");
-          have_disk_mesh = true;
-     }
      std::cout << "INFO: setting up checkerboard shaders and buffers.\n";
      auto cb_vx = make_checkerboard_vertex_shader();
      auto cb_gm = make_checkerboard_geometry_shader();
      auto cb_fr = make_checkerboard_fragment_shader();
      auto cbp = make_program("checkerboard pattern", cb_vx, cb_gm, cb_fr);
-     auto bv_disktopo = make_buffer(cut_mesh.getVertices());
-     auto bi_disktopo = make_buffer(cut_mesh.getIndices());
      auto bv_hypcoord = make_buffer(disk_mesh.getVertices());
      auto va_chkb = make_vertex_array();
      auto attr_cb_position = make_attribute(0, 4, DataType::FLOAT);
      auto attr_cb_hyp_coord = make_attribute(1, 3, DataType::FLOAT);
      describe(va_chkb, 0, attr_cb_position);
      describe(va_chkb, 1, attr_cb_hyp_coord);
-     auto rc_chkb = make_render_context(va_chkb, bi_disktopo, PatchType::TRIANGLE);
+     auto rc_chkb = make_render_context(va_chkb, bi0, PatchType::TRIANGLE);
 
      std::cout << "INFO: Setting up scene." << std::endl;
 
@@ -184,57 +161,6 @@ void Viewer::execute(int argc, char* argv[]) {
           auto& projectionMatrix = viewport.getProjectionMatrix();
           auto& viewMatrix = viewport.getViewMatrix();
           auto light = glm::normalize(Point3D(viewMatrix[0]));
-          auto tempDirection = viewMatrix * Vector4D(beamDirection, 0.0);
-          auto tempOrigin = viewMatrix * Point4D(beamOrigin, 1.0);
-
-          activate(va0);
-
-          activate(qpp, PatchType::QUINTIC);
-          activate(bv1, va0, 0);
-          //sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(3.5, 0.0, 0.0)));
-          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(dim.x + spacing, 0.0, 0.0)));
-          sm_vx.setProjectionMatrix(projectionMatrix);
-          TessellationControlShader::setInnerTessellationLevel(level0);
-          TessellationControlShader::setOuterTessellationLevel(level1);
-          hl_fr.setBandColor0(red);
-          hl_fr.setBandColor1(green);
-          hl_fr.setBandWidth(bandWidth);
-          hl_fr.setBeam(Point3D(tempOrigin) / tempOrigin.w, glm::normalize(Vector3D(tempDirection)));
-          hl_fr.setLight(light);
-          render(qpp, rc1);
-
-          activate(tmp);
-          activate(bv0, va0, 0);
-          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-dim.x - spacing, 0.0, 0.0)));
-          sm_vx.setProjectionMatrix(projectionMatrix);
-          sm_fr.setLight(light);
-          sm_fr.setModelColor(blue);
-          render(tmp, rc0);
-
-          activate(bv3, va0, 0);
-          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-dim.x - spacing, -dim.y - spacing, 0.0)));
-          sm_fr.setModelColor(red);
-          render(tmp, rc30, size(triangles));
-
-          activate(lmp, PatchType::LOOP_BOX_SPLINE);
-          activate(bv2, va0, 0);
-          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(0.0, -dim.y - spacing, 0.0)));
-          sm_vx.setProjectionMatrix(projectionMatrix);
-          sm_fr.setLight(light);
-          sm_fr.setModelColor(blue);
-          render(lmp, rc2);
-
-          activate(pcp);
-          activate(bv0, va0, 0);
-          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(dim.x + spacing, -dim.y - spacing, 0.0)));
-          sm_vx.setProjectionMatrix(projectionMatrix);
-          si_gm.setProjectionMatrix(projectionMatrix);
-          si_gm.setRadius(radius);
-          si_fr.setLight(light);
-          si_fr.setModelColor(blue);
-          si_fr.setProjectionMatrix(projectionMatrix);
-          si_fr.setRadius(radius);
-          render(pcp, rc4, mesh.getNumberOfVertices());
 
           activate(va1);
 
@@ -243,6 +169,7 @@ void Viewer::execute(int argc, char* argv[]) {
           activate(be3, va1, 1);
           activate(bc3, va1, 2);
           wf_vx.setModelViewMatrix(viewMatrix);
+          cb_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-(dim.x/2 + spacing), 0.0, 0.0)));
           wf_vx.setProjectionMatrix(projectionMatrix);
           wf_fr.setEdgeColor(red);
           wf_fr.setEdgeWidth(edgeWidth);
@@ -253,9 +180,9 @@ void Viewer::execute(int argc, char* argv[]) {
           if (have_disk_mesh) {
                activate(va_chkb);
                activate(cbp);
-               activate(bv_disktopo, va_chkb, 0);
+               activate(bv0, va_chkb, 0);
                activate(bv_hypcoord, va_chkb, 1);
-               cb_vx.setModelViewMatrix(viewMatrix);
+               cb_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(dim.x/2 + spacing, 0, 0.0)));
                cb_vx.setProjectionMatrix(projectionMatrix);
                cb_fr.setColors(hpcolor(0.0, 0.0, 0.0, 1.0), hpcolor(1.0, 1.0, 1.0, 1.0));
                cb_fr.setPeriod(hpvec2(0.05, 0.05));
