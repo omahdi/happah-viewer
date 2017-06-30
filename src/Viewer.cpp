@@ -33,18 +33,34 @@ void Viewer::execute(int argc, char* argv[]) {
 
      std::cout << "INFO: Importing " << argv[1] << '.' << std::endl;
 
+     auto green = hpcolor(0.0, 1.0, 0.0, 1.0);
+     auto red = hpcolor(1.0, 0.0, 0.0, 1.0);
+     auto blue = hpcolor(0.0, 0.0, 1.0, 1.0);
+     
      auto content = format::off::read(argv[1]);
      auto mesh = make_triangle_mesh<VertexP3>(content);
      auto graph = TriangleMesh<VertexP3, Format::DIRECTED_EDGE>(mesh);
-     auto edgeColors = std::vector<hpcolor>(3 * size(mesh), hpcolor(0.0, 0.0, 1.0, 1.0));
+     auto edgeColors = std::vector<hpcolor>(3 * size(mesh), blue);
+     auto vertexColors = std::vector<hpcolor>(3 * size(mesh), blue);
      auto triangles = make_triangle_array(mesh);
      auto boxes = make_loop_box_spline_mesh(mesh);
      auto quartic = make_spline_surface(TriangleMesh<VertexP3, Format::DIRECTED_EDGE>(mesh));
      //auto mesh = make_triangle_mesh(quartic, 4);
      auto quintic = elevate(quartic);
 
-     for(auto e : trim(graph, cut(graph))) edgeColors[e] = hpcolor(1.0, 0.0, 0.0, 1.0);
-
+     for(auto e : trim(graph, cut(graph))){
+          edgeColors[e] = red;
+          visit_spokes(graph.getEdges(), e, [&](auto e) {
+               static constexpr hpuint o[3] = { 1, 2, 0 };
+               
+               auto f = graph.getEdge(e).opposite;
+               auto t = make_triangle_index(f);
+               auto i = make_edge_offset(f);
+               vertexColors[3 * t + o[i]] = red;
+               vertexColors[e] = red;
+          });
+     }
+     
      std::cout << "INFO: Making shaders." << std::endl;
 
      auto hl_fr = make_highlight_lines_fragment_shader();
@@ -77,11 +93,13 @@ void Viewer::execute(int argc, char* argv[]) {
      auto bi1 = make_buffer(std::get<1>(quintic.getPatches()));
      auto bi2 = make_buffer(boxes.getIndices());
      auto be3 = make_buffer(edgeColors);
+     auto bc3 = make_buffer(vertexColors);
 
      std::cout << "INFO: Making vertex arrays." << std::endl;
 
      auto position = make_attribute(0, 4, DataType::FLOAT);
      auto edgeColor = make_attribute(1, 4, DataType::FLOAT);
+     auto vertexColor = make_attribute(2, 4, DataType::FLOAT);
 
      auto va0 = make_vertex_array();
      auto va1 = make_vertex_array();
@@ -89,6 +107,7 @@ void Viewer::execute(int argc, char* argv[]) {
      describe(va0, 0, position);
      describe(va1, 0, position);
      describe(va1, 1, edgeColor);
+     describe(va1, 2, vertexColor);
 
      std::cout << "INFO: Making render contexts." << std::endl;
 
@@ -104,13 +123,10 @@ void Viewer::execute(int argc, char* argv[]) {
      auto bandWidth = 1.0;
      auto beamDirection = Vector3D(0.0, 0.0, 1.0);
      auto beamOrigin = Point3D(10.0, 0.0, 0.0);
-     auto blue = hpcolor(0.0, 0.0, 1.0, 1.0);
-     auto edgeWidth = 0.02;
-     auto green = hpcolor(0.0, 1.0, 0.0, 1.0);
+     auto edgeWidth = 0.006; //0.02;
      auto level0 = std::array<hpreal, 2>({ 100, 100 });
      auto level1 = std::array<hpreal, 4>({ 60, 60, 60, 60 });
      auto radius = 0.05;
-     auto red = hpcolor(1.0, 0.0, 0.0, 1.0);
 
      std::cout << "INFO: Rendering scene." << std::endl;
 
@@ -127,7 +143,7 @@ void Viewer::execute(int argc, char* argv[]) {
           auto tempDirection = viewMatrix * Vector4D(beamDirection, 0.0);
           auto tempOrigin = viewMatrix * Point4D(beamOrigin, 1.0);
 
-          activate(va0);
+          /*activate(va0);
 
           activate(qpp, PatchType::QUINTIC);
           activate(bv1, va0, 0);
@@ -173,13 +189,14 @@ void Viewer::execute(int argc, char* argv[]) {
           si_fr.setModelColor(blue);
           si_fr.setProjectionMatrix(projectionMatrix);
           si_fr.setRadius(radius);
-          render(pcp, rc4, mesh.getNumberOfVertices());
+          render(pcp, rc4, mesh.getNumberOfVertices());*/
 
           activate(va1);
 
           activate(wfp);
           activate(bv3, va1, 0);
           activate(be3, va1, 1);
+          activate(bc3, va1, 2);
           wf_vx.setModelViewMatrix(viewMatrix);
           wf_vx.setProjectionMatrix(projectionMatrix);
           wf_fr.setEdgeColor(red);
