@@ -18,6 +18,21 @@
 
 namespace happah {
 
+Vector3D calcBB(std::vector<VertexP3> vertices){
+     Vector3D min = Vector3D(FLT_MAX);
+     Vector3D max = Vector3D(FLT_MIN);
+     for(auto v : vertices){
+          if (v.position.x < min.x) min.x = v.position.x;
+          if (v.position.y < min.y) min.y = v.position.y;
+          if (v.position.z < min.z) min.z = v.position.z;
+          
+          if (v.position.x > max.x) max.x = v.position.x;
+          if (v.position.y > max.y) max.y = v.position.y;
+          if (v.position.z > max.z) max.z = v.position.z;
+     }
+     return max - min;
+}
+     
 Viewer::Viewer(hpuint width, hpuint height, const std::string& title)
      : m_window(width, height, title) {
      glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -127,6 +142,8 @@ void Viewer::execute(int argc, char* argv[]) {
      auto level0 = std::array<hpreal, 2>({ 100, 100 });
      auto level1 = std::array<hpreal, 4>({ 60, 60, 60, 60 });
      auto radius = 0.05;
+     Vector3D dim = calcBB(mesh.getVertices());
+     float spacing = 1.0;
 
      std::cout << "INFO: Rendering scene." << std::endl;
 
@@ -143,11 +160,12 @@ void Viewer::execute(int argc, char* argv[]) {
           auto tempDirection = viewMatrix * Vector4D(beamDirection, 0.0);
           auto tempOrigin = viewMatrix * Point4D(beamOrigin, 1.0);
 
-          /*activate(va0);
+          activate(va0);
 
           activate(qpp, PatchType::QUINTIC);
           activate(bv1, va0, 0);
-          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(3.5, 0.0, 0.0)));
+          //sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(3.5, 0.0, 0.0)));
+          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(dim.x + spacing, 0.0, 0.0)));
           sm_vx.setProjectionMatrix(projectionMatrix);
           TessellationControlShader::setInnerTessellationLevel(level0);
           TessellationControlShader::setOuterTessellationLevel(level1);
@@ -160,20 +178,20 @@ void Viewer::execute(int argc, char* argv[]) {
 
           activate(tmp);
           activate(bv0, va0, 0);
-          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-3.5, 0.0, 0.0)));
+          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-dim.x - spacing, 0.0, 0.0)));
           sm_vx.setProjectionMatrix(projectionMatrix);
           sm_fr.setLight(light);
           sm_fr.setModelColor(blue);
           render(tmp, rc0);
 
           activate(bv3, va0, 0);
-          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-3.5, -3.5, 0.0)));
+          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-dim.x - spacing, -dim.y - spacing, 0.0)));
           sm_fr.setModelColor(red);
           render(tmp, rc30, size(triangles));
 
           activate(lmp, PatchType::LOOP_BOX_SPLINE);
           activate(bv2, va0, 0);
-          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(0.0, -3.5, 0.0)));
+          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(0.0, -dim.y - spacing, 0.0)));
           sm_vx.setProjectionMatrix(projectionMatrix);
           sm_fr.setLight(light);
           sm_fr.setModelColor(blue);
@@ -181,7 +199,7 @@ void Viewer::execute(int argc, char* argv[]) {
 
           activate(pcp);
           activate(bv0, va0, 0);
-          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(3.5, -3.5, 0.0)));
+          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(dim.x + spacing, -dim.y - spacing, 0.0)));
           sm_vx.setProjectionMatrix(projectionMatrix);
           si_gm.setProjectionMatrix(projectionMatrix);
           si_gm.setRadius(radius);
@@ -189,7 +207,7 @@ void Viewer::execute(int argc, char* argv[]) {
           si_fr.setModelColor(blue);
           si_fr.setProjectionMatrix(projectionMatrix);
           si_fr.setRadius(radius);
-          render(pcp, rc4, mesh.getNumberOfVertices());*/
+          render(pcp, rc4, mesh.getNumberOfVertices());
 
           activate(va1);
 
@@ -208,6 +226,6 @@ void Viewer::execute(int argc, char* argv[]) {
           glfwSwapBuffers(context);
      }
 }
-
+     
 }//namespace happah
 
