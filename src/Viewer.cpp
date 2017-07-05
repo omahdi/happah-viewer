@@ -4,9 +4,7 @@
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-// 2017.07 - Hedwig Amberg    - corrected translate to more intuitive method.
-
-//TODO: huge delay for arrow key input
+// 2017.07 - Hedwig Amberg    - made movement more intuitive, better performance.
 
 #include <happah/format.h>
 #include <happah/geometries/converters.h>
@@ -152,8 +150,6 @@ void Viewer::execute(int argc, char* argv[]) {
 
      std::cout << "INFO: Rendering scene." << std::endl;
 
-     glfwSetInputMode(m_window.getContext(), GLFW_STICKY_KEYS, 1);
-     lastFrame = 0;
      look_at(viewport, mesh.getVertices());
      glClearColor(1, 1, 1, 1);
      while(!glfwWindowShouldClose(context)) {
@@ -174,7 +170,6 @@ void Viewer::execute(int argc, char* argv[]) {
 
           activate(qpp, PatchType::QUINTIC);
           activate(bv1, va0, 0);
-          //sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(3.5, 0.0, 0.0)));
           sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(dim.x + spacing, 0.0, 0.0)));
           sm_vx.setProjectionMatrix(projectionMatrix);
           TessellationControlShader::setInnerTessellationLevel(level0);
@@ -238,30 +233,25 @@ void Viewer::execute(int argc, char* argv[]) {
 }
      
 void Viewer::movement(Viewport& viewport){
-     float speed = 0.1;
-     float thisFrame = glfwGetTime();
-     float delta = thisFrame - lastFrame;
-     if(glfwGetKey(m_window.getContext(), GLFW_KEY_UP) == GLFW_PRESS){
-          //const Vector3D& step = Vector3D(0, 0, speed * delta);
-          const Vector2D& step = Vector3D(0, speed * delta);
+     float depthSpeed = 1.0;
+     float horizontalSpeed = 0.1;
+     auto window = m_window.getContext();
+     if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS){
+          const Vector3D& step = Vector3D(0, 0, depthSpeed);
           viewport.translate(step);
      }
-     if(glfwGetKey(m_window.getContext(), GLFW_KEY_DOWN) == GLFW_PRESS){
-          //const Vector3D& step = Vector3D(0, 0, -speed * delta);
-          const Vector2D& step = Vector3D(0, -speed * delta);
+     if(glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS){
+          const Vector3D& step = Vector3D(0, 0, -depthSpeed);
           viewport.translate(step);
      }
-     if(glfwGetKey(m_window.getContext(), GLFW_KEY_LEFT) == GLFW_PRESS){
-          //const Vector3D& step = Vector3D(speed * delta, 0, 0);
-          const Vector2D& step = Vector3D(speed * delta, 0);
+     if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS){
+          const Vector2D& step = Vector2D(horizontalSpeed, 0);
           viewport.translate(step);
      }
-     if(glfwGetKey(m_window.getContext(), GLFW_KEY_RIGHT) == GLFW_PRESS){
-          //const Vector3D& step = Vector3D(-speed * delta, 0, 0);
-          const Vector2D& step = Vector3D(-speed * delta, 0);
+     if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS){
+          const Vector2D& step = Vector2D(-horizontalSpeed, 0);
           viewport.translate(step);
      }
-     lastFrame = thisFrame;
 }
      
 }//namespace happah

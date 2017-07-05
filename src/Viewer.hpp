@@ -4,7 +4,7 @@
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-// 2017.07 - Hedwig Amberg    - added arrow key movement.
+// 2017.07 - Hedwig Amberg    - made movement more intuitive, better performance.
 
 #pragma once
 
@@ -23,8 +23,6 @@ public:
 
 private:
      Window m_window;
-     
-     float lastFrame;
      
      void movement(Viewport& viewport);
 
