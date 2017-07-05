@@ -18,20 +18,27 @@
 
 namespace happah {
 
-Vector3D calcBB(std::vector<VertexP3> vertices){
-     Vector3D min = Vector3D(FLT_MAX);
-     Vector3D max = Vector3D(FLT_MIN);
-     for(auto v : vertices){
-          if (v.position.x < min.x) min.x = v.position.x;
-          if (v.position.y < min.y) min.y = v.position.y;
-          if (v.position.z < min.z) min.z = v.position.z;
+//TODO: move next two methods to TriangleMesh.h
+template<class Vertex>
+std::tuple<Point3D, Point3D> make_axis_aligned_bounding_box(const std::vector<Vertex>& vertices){
+     auto min = Point3D(std::numeric_limits<hpreal>::min());
+     auto max = Point3D(std::numeric_limits<hpreal>::min());
+
+     for(auto& vertex : vertices) {
+          if(vertex.position.x < min.x) min.x = vertex.position.x;
+          if(vertex.position.y < min.y) min.y = vertex.position.y;
+          if(vertex.position.z < min.z) min.z = vertex.position.z;
           
-          if (v.position.x > max.x) max.x = v.position.x;
-          if (v.position.y > max.y) max.y = v.position.y;
-          if (v.position.z > max.z) max.z = v.position.z;
+          if(vertex.position.x > max.x) max.x = vertex.position.x;
+          if(vertex.position.y > max.y) max.y = vertex.position.y;
+          if(vertex.position.z > max.z) max.z = vertex.position.z;
      }
-     return max - min;
+
+     return std::make_tuple(min, max);
 }
+
+template<class Vertex, Format format>
+std::tuple<Point3D, Point3D> make_axis_aligned_bounding_box(const TriangleMesh<Vertex, format>& mesh) { return make_axis_aligned_bounding_box(mesh.getVertices()); }
      
 Viewer::Viewer(hpuint width, hpuint height, const std::string& title)
      : m_window(width, height, title) {
@@ -138,12 +145,13 @@ void Viewer::execute(int argc, char* argv[]) {
      auto bandWidth = 1.0;
      auto beamDirection = Vector3D(0.0, 0.0, 1.0);
      auto beamOrigin = Point3D(10.0, 0.0, 0.0);
+     auto box = make_axis_aligned_bounding_box(mesh);
      auto edgeWidth = 0.006; //0.02;
+     auto lengths = std::get<1>(box) - std::get<0>(box);
      auto level0 = std::array<hpreal, 2>({ 100, 100 });
      auto level1 = std::array<hpreal, 4>({ 60, 60, 60, 60 });
+     auto padding = hpreal(0.1) * lengths;
      auto radius = 0.05;
-     Vector3D dim = calcBB(mesh.getVertices());
-     float spacing = 1.0;
 
      std::cout << "INFO: Rendering scene." << std::endl;
 
@@ -164,8 +172,7 @@ void Viewer::execute(int argc, char* argv[]) {
 
           activate(qpp, PatchType::QUINTIC);
           activate(bv1, va0, 0);
-          //sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(3.5, 0.0, 0.0)));
-          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(dim.x + spacing, 0.0, 0.0)));
+          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(lengths.x + padding.x, 0.0, 0.0)));
           sm_vx.setProjectionMatrix(projectionMatrix);
           TessellationControlShader::setInnerTessellationLevel(level0);
           TessellationControlShader::setOuterTessellationLevel(level1);
@@ -178,20 +185,20 @@ void Viewer::execute(int argc, char* argv[]) {
 
           activate(tmp);
           activate(bv0, va0, 0);
-          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-dim.x - spacing, 0.0, 0.0)));
+          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-lengths.x - padding.x, 0.0, 0.0)));
           sm_vx.setProjectionMatrix(projectionMatrix);
           sm_fr.setLight(light);
           sm_fr.setModelColor(blue);
           render(tmp, rc0);
 
           activate(bv3, va0, 0);
-          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-dim.x - spacing, -dim.y - spacing, 0.0)));
+          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-lengths.x - padding.x, -lengths.y - padding.y, 0.0)));
           sm_fr.setModelColor(red);
           render(tmp, rc30, size(triangles));
 
           activate(lmp, PatchType::LOOP_BOX_SPLINE);
           activate(bv2, va0, 0);
-          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(0.0, -dim.y - spacing, 0.0)));
+          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(0.0, -lengths.y - padding.y, 0.0)));
           sm_vx.setProjectionMatrix(projectionMatrix);
           sm_fr.setLight(light);
           sm_fr.setModelColor(blue);
@@ -199,7 +206,7 @@ void Viewer::execute(int argc, char* argv[]) {
 
           activate(pcp);
           activate(bv0, va0, 0);
-          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(dim.x + spacing, -dim.y - spacing, 0.0)));
+          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(lengths.x + padding.x, -lengths.y - padding.y, 0.0)));
           sm_vx.setProjectionMatrix(projectionMatrix);
           si_gm.setProjectionMatrix(projectionMatrix);
           si_gm.setRadius(radius);
