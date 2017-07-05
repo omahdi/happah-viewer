@@ -4,7 +4,7 @@
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-// 2017.07 - Hedwig Amberg    - added arrow key movement.
+// 2017.07 - Hedwig Amberg    - corrected translate to more intuitive method.
 
 //TODO: huge delay for arrow key input
 
@@ -242,19 +242,23 @@ void Viewer::movement(Viewport& viewport){
      float thisFrame = glfwGetTime();
      float delta = thisFrame - lastFrame;
      if(glfwGetKey(m_window.getContext(), GLFW_KEY_UP) == GLFW_PRESS){
-          const Vector3D& step = Vector3D(0, 0, speed * delta);
+          //const Vector3D& step = Vector3D(0, 0, speed * delta);
+          const Vector2D& step = Vector3D(0, speed * delta);
           viewport.translate(step);
      }
      if(glfwGetKey(m_window.getContext(), GLFW_KEY_DOWN) == GLFW_PRESS){
-          const Vector3D& step = Vector3D(0, 0, -speed * delta);
+          //const Vector3D& step = Vector3D(0, 0, -speed * delta);
+          const Vector2D& step = Vector3D(0, -speed * delta);
           viewport.translate(step);
      }
      if(glfwGetKey(m_window.getContext(), GLFW_KEY_LEFT) == GLFW_PRESS){
-          const Vector3D& step = Vector3D(speed * delta, 0, 0);
+          //const Vector3D& step = Vector3D(speed * delta, 0, 0);
+          const Vector2D& step = Vector3D(speed * delta, 0);
           viewport.translate(step);
      }
      if(glfwGetKey(m_window.getContext(), GLFW_KEY_RIGHT) == GLFW_PRESS){
-          const Vector3D& step = Vector3D(-speed * delta, 0, 0);
+          //const Vector3D& step = Vector3D(-speed * delta, 0, 0);
+          const Vector2D& step = Vector3D(-speed * delta, 0);
           viewport.translate(step);
      }
      lastFrame = thisFrame;
