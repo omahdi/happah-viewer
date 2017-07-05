@@ -1,7 +1,12 @@
 // Copyright 2017
 //   Pawel Herman - Karlsruhe Institute of Technology - pherman@ira.uka.de
+//   Hedwig Amberg  - Karlsruhe Institute of Technology - hedwigdorothea@gmail.com
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+// 2017.07 - Hedwig Amberg    - added arrow key movement.
+
+//TODO: huge delay for arrow key input
 
 #include <happah/format.h>
 #include <happah/geometries/converters.h>
@@ -147,9 +152,14 @@ void Viewer::execute(int argc, char* argv[]) {
 
      std::cout << "INFO: Rendering scene." << std::endl;
 
+     glfwSetInputMode(m_window.getContext(), GLFW_STICKY_KEYS, 1);
+     lastFrame = 0;
      look_at(viewport, mesh.getVertices());
      glClearColor(1, 1, 1, 1);
      while(!glfwWindowShouldClose(context)) {
+          
+          movement(viewport);
+          
           glfwPollEvents();
           glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
           glEnable(GL_DEPTH_TEST);
@@ -225,6 +235,29 @@ void Viewer::execute(int argc, char* argv[]) {
 
           glfwSwapBuffers(context);
      }
+}
+     
+void Viewer::movement(Viewport& viewport){
+     float speed = 0.1;
+     float thisFrame = glfwGetTime();
+     float delta = thisFrame - lastFrame;
+     if(glfwGetKey(m_window.getContext(), GLFW_KEY_UP) == GLFW_PRESS){
+          const Vector3D& step = Vector3D(0, 0, speed * delta);
+          viewport.translate(step);
+     }
+     if(glfwGetKey(m_window.getContext(), GLFW_KEY_DOWN) == GLFW_PRESS){
+          const Vector3D& step = Vector3D(0, 0, -speed * delta);
+          viewport.translate(step);
+     }
+     if(glfwGetKey(m_window.getContext(), GLFW_KEY_LEFT) == GLFW_PRESS){
+          const Vector3D& step = Vector3D(speed * delta, 0, 0);
+          viewport.translate(step);
+     }
+     if(glfwGetKey(m_window.getContext(), GLFW_KEY_RIGHT) == GLFW_PRESS){
+          const Vector3D& step = Vector3D(-speed * delta, 0, 0);
+          viewport.translate(step);
+     }
+     lastFrame = thisFrame;
 }
      
 }//namespace happah
