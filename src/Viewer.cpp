@@ -4,7 +4,7 @@
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-// 2017.07 - Hedwig Amberg    - made movement more intuitive, better performance.
+// 2017.07 - Hedwig Amberg    - rename new shader version, add old version with original name.
 
 #include <happah/format.h>
 #include <happah/geometries/converters.h>
@@ -98,7 +98,9 @@ void Viewer::execute(int argc, char* argv[]) {
      auto sm_vx = make_simple_vertex_shader();
      auto wf_fr = make_wireframe_fragment_shader();
      auto wf_gm = make_geometry_shader("shaders/wireframe.g.glsl");
-     auto wf_vx = make_wireframe_vertex_shader();
+     auto ed_fr = make_edge_fragment_shader();
+     auto ed_gm = make_geometry_shader("shaders/edge.g.glsl");
+     auto ed_vx = make_edge_vertex_shader();
 
      std::cout << "INFO: Making programs." << std::endl;
 
@@ -106,7 +108,8 @@ void Viewer::execute(int argc, char* argv[]) {
      auto qpp = make_program("quintic spline surface", sm_vx, qp_te, hl_fr);
      auto pcp = make_program("point cloud", sm_vx, si_gm, si_fr);
      auto tmp = make_program("triangle mesh", sm_vx, nm_gm, sm_fr);
-     auto wfp = make_program("wireframe triangle mesh", wf_vx, wf_gm, wf_fr);
+     auto wfp = make_program("wireframe triangle mesh", sm_vx, wf_gm, wf_fr);
+     auto edp = make_program("edges triangle mesh", ed_vx, ed_gm, ed_fr);
 
      std::cout << "INFO: Making buffers." << std::endl;
 
@@ -221,20 +224,29 @@ void Viewer::execute(int argc, char* argv[]) {
           si_fr.setProjectionMatrix(projectionMatrix);
           si_fr.setRadius(radius);
           render(pcp, rc4, mesh.getNumberOfVertices());
-
+          /*
+          activate(wfp);
+          activate(bv0, va0, 0);
+          sm_vx.setModelViewMatrix(viewMatrix);
+          sm_vx.setProjectionMatrix(projectionMatrix);
+          wf_fr.setEdgeWidth(edgeWidth);
+          wf_fr.setEdgeColor(red);
+          wf_fr.setLight(light);
+          wf_fr.setModelColor(blue);
+          render(wfp, rc0);
+          */
           activate(va1);
 
-          activate(wfp);
+          activate(edp);
           activate(bv3, va1, 0);
           activate(be3, va1, 1);
           activate(bc3, va1, 2);
-          wf_vx.setModelViewMatrix(viewMatrix);
-          wf_vx.setProjectionMatrix(projectionMatrix);
-          wf_fr.setEdgeColor(red);
-          wf_fr.setEdgeWidth(edgeWidth);
-          wf_fr.setLight(light);
-          wf_fr.setModelColor(blue);
-          render(wfp, rc31, size(triangles));
+          ed_vx.setModelViewMatrix(viewMatrix);
+          ed_vx.setProjectionMatrix(projectionMatrix);
+          ed_fr.setEdgeWidth(edgeWidth);
+          ed_fr.setLight(light);
+          ed_fr.setModelColor(blue);
+          render(edp, rc31, size(triangles));
 
           glfwSwapBuffers(context);
      }
