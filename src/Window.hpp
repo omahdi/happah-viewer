@@ -4,7 +4,7 @@
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-// 2017.06 - Hedwig Amberg    - Added scroll zoom.
+// 2017.06 - Hedwig Amberg    - modified scroll to zoom or walk, arrow keys for strafing.
 
 #pragma once
 
@@ -34,10 +34,14 @@ private:
      Viewport m_viewport;
      double m_x;//mouse coordinates
      double m_y;
+     
+     bool ctrlPressed = false;
 
      void onCursorPosEvent(double x, double y);
 
      void onFramebufferSizeEvent(hpuint width, hpuint height);
+     
+     void onKeyEvent(int key, int scancode, int action, int mods);
 
      void onMouseButtonEvent(hpint button, hpint action, hpint mods);
      
@@ -48,6 +52,8 @@ private:
      friend void onCursorPosEvent(GLFWwindow* handle, double x, double y);
 
      friend void onFramebufferSizeEvent(GLFWwindow* handle, int width, int height);
+     
+     friend void onKeyEvent(GLFWwindow* handle, int key, int scancode, int action, int mods);
 
      friend void onMouseButtonEvent(GLFWwindow* handle, int button, int action, int mods);
      
@@ -60,6 +66,8 @@ private:
 void onCursorPosEvent(GLFWwindow* handle, double x, double y);
 
 void onFramebufferSizeEvent(GLFWwindow* handle, int width, int height);
+     
+void onKeyEvent(GLFWwindow* handle, int key, int scancode, int action, int mods);
 
 void onMouseButtonEvent(GLFWwindow* handle, int button, int action, int mods);
      

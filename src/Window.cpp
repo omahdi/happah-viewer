@@ -4,7 +4,7 @@
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-// 2017.06 - Hedwig Amberg    - Added scroll zoom.
+// 2017.06 - Hedwig Amberg    - modified scroll to zoom or walk, arrow keys for strafing.
 
 #include <stdexcept>
 
@@ -20,6 +20,7 @@ Window::Window(hpuint width, hpuint height, const std::string& title)
      s_windows[m_handle] = this;
      glfwSetCursorPosCallback(m_handle, happah::onCursorPosEvent);
      glfwSetFramebufferSizeCallback(m_handle, happah::onFramebufferSizeEvent);
+     glfwSetKeyCallback(m_handle, happah::onKeyEvent);
      glfwSetMouseButtonCallback(m_handle, happah::onMouseButtonEvent);
      glfwSetScrollCallback(m_handle, happah::onScrollEvent);
      glfwSetWindowSizeCallback(m_handle, happah::onWindowSizeEvent);
@@ -44,6 +45,12 @@ void Window::onCursorPosEvent(double x, double y) {
 }
 
 void Window::onFramebufferSizeEvent(hpuint width, hpuint height) { glViewport(0, 0, width, height); }
+     
+void Window::onKeyEvent(int key, int scancode, int action, int mods){
+     if( (key == GLFW_KEY_LEFT_CONTROL) || (key == GLFW_KEY_RIGHT_CONTROL) ){
+          ctrlPressed = (action != GLFW_RELEASE);
+     }
+}
 
 void Window::onMouseButtonEvent(hpint button, hpint action, hpint mods) {
      if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
@@ -53,7 +60,14 @@ void Window::onMouseButtonEvent(hpint button, hpint action, hpint mods) {
 }
      
 void Window::onScrollEvent(double xoffset, double yoffset){
-     m_viewport.zoom(yoffset * 0.01);
+     if(ctrlPressed){
+          m_viewport.zoom(yoffset * 0.01);
+     }else{
+          float delta = yoffset * 0.1;
+          Point3D viewDir = m_viewport.getViewDirection();
+          const Vector3D& step = Vector3D(delta * viewDir.x, delta * viewDir.y, delta * viewDir.z);
+          m_viewport.translate(step);
+     }
 }
 
 void Window::onWindowSizeEvent(hpuint width, hpuint height) { m_viewport.setSize(width, height); }
@@ -61,6 +75,8 @@ void Window::onWindowSizeEvent(hpuint width, hpuint height) { m_viewport.setSize
 void onCursorPosEvent(GLFWwindow* handle, double x, double y) { Window::s_windows[handle]->onCursorPosEvent(x, y); }
 
 void onFramebufferSizeEvent(GLFWwindow* handle, int width, int height) { Window::s_windows[handle]->onFramebufferSizeEvent(width, height); }
+     
+void onKeyEvent(GLFWwindow* handle, int key, int scancode, int action, int mods){ Window::s_windows[handle]->onKeyEvent(key, scancode, action, mods); }
 
 void onMouseButtonEvent(GLFWwindow* handle, int button, int action, int mods) { Window::s_windows[handle]->onMouseButtonEvent(button, action, mods); }
      

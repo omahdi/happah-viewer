@@ -4,7 +4,7 @@
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-// 2017.07 - Hedwig Amberg    - rename new shader version, add old version with original name.
+// 2017.07 - Hedwig Amberg    - modified scroll to zoom or walk, arrow keys for strafing.
 
 #include <happah/format.h>
 #include <happah/geometries/converters.h>
@@ -253,23 +253,22 @@ void Viewer::execute(int argc, char* argv[]) {
 }
      
 void Viewer::movement(Viewport& viewport){
-     float depthSpeed = 1.0;
-     float horizontalSpeed = 0.1;
+     float speed = 0.1;
      auto window = m_window.getContext();
      if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS){
-          const Vector3D& step = Vector3D(0, 0, depthSpeed);
+          const Vector2D& step = Vector2D(0, speed);
           viewport.translate(step);
      }
      if(glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS){
-          const Vector3D& step = Vector3D(0, 0, -depthSpeed);
+          const Vector2D& step = Vector2D(0, - speed);
           viewport.translate(step);
      }
      if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS){
-          const Vector2D& step = Vector2D(horizontalSpeed, 0);
+          const Vector2D& step = Vector2D(speed, 0);
           viewport.translate(step);
      }
      if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS){
-          const Vector2D& step = Vector2D(-horizontalSpeed, 0);
+          const Vector2D& step = Vector2D(- speed, 0);
           viewport.translate(step);
      }
 }
