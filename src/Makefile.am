@@ -9,5 +9,5 @@ happah_SOURCES = \
      Viewer.cpp \
      Window.cpp
 happah_CPPFLAGS = -std=c++1y -I/usr/include/eigen3
-happah_LDFLAGS = -lGL -lGLU -lglfw -lXinerama -lXcursor -lX11 -lXxf86vm -lXrandr -lpthread -lXi -lhappah -lhappah-graphics -lboost_iostreams -ldl
+happah_LDFLAGS = -lGL -lglfw -lX11 -lXxf86vm -lXrandr -lpthread -lhappah -lhappah-graphics -lboost_iostreams -ldl
 
