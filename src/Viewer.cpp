@@ -1,7 +1,10 @@
 // Copyright 2017
 //   Pawel Herman - Karlsruhe Institute of Technology - pherman@ira.uka.de
+//   Hedwig Amberg  - Karlsruhe Institute of Technology - hedwigdorothea@gmail.com
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+// 2017.07 - Hedwig Amberg    - made movement more intuitive, better performance.
 
 #include <happah/format.h>
 #include <happah/geometries/converters.h>
@@ -146,7 +149,7 @@ void Viewer::execute(int argc, char* argv[]) {
      auto beamDirection = Vector3D(0.0, 0.0, 1.0);
      auto beamOrigin = Point3D(10.0, 0.0, 0.0);
      auto box = make_axis_aligned_bounding_box(mesh);
-     auto edgeWidth = 0.006; //0.02;
+     auto edgeWidth = 0.006; //0.02;//TODO: 0.1 * average height?
      auto lengths = std::get<1>(box) - std::get<0>(box);
      auto level0 = std::array<hpreal, 2>({ 100, 100 });
      auto level1 = std::array<hpreal, 4>({ 60, 60, 60, 60 });
@@ -158,6 +161,9 @@ void Viewer::execute(int argc, char* argv[]) {
      look_at(viewport, mesh.getVertices());
      glClearColor(1, 1, 1, 1);
      while(!glfwWindowShouldClose(context)) {
+          
+          movement(viewport);
+          
           glfwPollEvents();
           glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
           glEnable(GL_DEPTH_TEST);
@@ -231,6 +237,28 @@ void Viewer::execute(int argc, char* argv[]) {
           render(wfp, rc31, size(triangles));
 
           glfwSwapBuffers(context);
+     }
+}
+     
+void Viewer::movement(Viewport& viewport){
+     float depthSpeed = 1.0;
+     float horizontalSpeed = 0.1;
+     auto window = m_window.getContext();
+     if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS){
+          const Vector3D& step = Vector3D(0, 0, depthSpeed);
+          viewport.translate(step);
+     }
+     if(glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS){
+          const Vector3D& step = Vector3D(0, 0, -depthSpeed);
+          viewport.translate(step);
+     }
+     if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS){
+          const Vector2D& step = Vector2D(horizontalSpeed, 0);
+          viewport.translate(step);
+     }
+     if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS){
+          const Vector2D& step = Vector2D(-horizontalSpeed, 0);
+          viewport.translate(step);
      }
 }
      
