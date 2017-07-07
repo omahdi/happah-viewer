@@ -37,24 +37,9 @@ void Viewer::execute(int argc, char* argv[]) {
      auto mesh = make_triangle_mesh<VertexP3>(content);
      auto graph = TriangleMesh<VertexP3, Format::DIRECTED_EDGE>(mesh);
      auto edgeColors = std::vector<hpcolor>(3 * size(mesh), hpcolor(0.0, 0.0, 1.0, 1.0));
-     auto triangles = make_triangle_array(mesh);
-     auto boxes = make_loop_box_spline_mesh(mesh);
-     auto quartic = make_spline_surface(TriangleMesh<VertexP3, Format::DIRECTED_EDGE>(mesh));
-     //auto mesh = make_triangle_mesh(quartic, 4);
-     auto quintic = elevate(quartic);
-
-     for(auto e : trim(graph, cut(graph))) edgeColors[e] = hpcolor(1.0, 0.0, 0.0, 1.0);
 
      std::cout << "INFO: Making shaders." << std::endl;
 
-     auto hl_fr = make_highlight_lines_fragment_shader();
-     auto lb_te = make_tessellation_evaluation_shader("shaders/loop-box-spline.te.glsl");
-     auto nm_gm = make_geometry_shader("shaders/normals.g.glsl");
-     auto qp_te = make_tessellation_evaluation_shader("shaders/quintic-patch.te.glsl");
-     auto si_fr = make_sphere_impostor_fragment_shader();
-     auto si_gm = make_sphere_impostor_geometry_shader();
-     auto sm_fr = make_simple_fragment_shader();
-     auto sm_vx = make_simple_vertex_shader();
      auto wf_fr = make_wireframe_fragment_shader();
      auto wf_gm = make_geometry_shader("shaders/wireframe.g.glsl");
      auto wf_vx = make_wireframe_vertex_shader();
@@ -101,9 +86,6 @@ void Viewer::execute(int argc, char* argv[]) {
 
      std::cout << "INFO: Setting up scene." << std::endl;
 
-     auto bandWidth = 1.0;
-     auto beamDirection = Vector3D(0.0, 0.0, 1.0);
-     auto beamOrigin = Point3D(10.0, 0.0, 0.0);
      auto blue = hpcolor(0.0, 0.0, 1.0, 1.0);
      auto edgeWidth = 0.02;
      auto green = hpcolor(0.0, 1.0, 0.0, 1.0);
@@ -114,6 +96,7 @@ void Viewer::execute(int argc, char* argv[]) {
 
      std::cout << "INFO: Rendering scene." << std::endl;
 
+     glfwSwapInterval(1);
      look_at(viewport, mesh.getVertices());
      glClearColor(1, 1, 1, 1);
      while(!glfwWindowShouldClose(context) && !m_window.quit_flag()) {
@@ -129,63 +112,6 @@ void Viewer::execute(int argc, char* argv[]) {
 
           activate(va0);
 
-          if (m_window.enabled(Window::RenderToggle::QUINTIC)) {
-               activate(qpp, PatchType::QUINTIC);
-               activate(bv1, va0, 0);
-               sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(3.5, 0.0, 0.0)));
-               sm_vx.setProjectionMatrix(projectionMatrix);
-               TessellationControlShader::setInnerTessellationLevel(level0);
-               TessellationControlShader::setOuterTessellationLevel(level1);
-               hl_fr.setBandColor0(red);
-               hl_fr.setBandColor1(green);
-               hl_fr.setBandWidth(bandWidth);
-               hl_fr.setBeam(Point3D(tempOrigin) / tempOrigin.w, glm::normalize(Vector3D(tempDirection)));
-               hl_fr.setLight(light);
-               render(qpp, rc1);
-          }
-
-          if (m_window.enabled(Window::RenderToggle::SOLID_MESH)) {
-               activate(tmp);
-               activate(bv0, va0, 0);
-               sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-3.5, 0.0, 0.0)));
-               sm_vx.setProjectionMatrix(projectionMatrix);
-               sm_fr.setLight(light);
-               sm_fr.setModelColor(blue);
-               render(tmp, rc0);
-          }
-
-          if (m_window.enabled(Window::RenderToggle::SOLID_TRIS)) {
-               activate(tmp);
-               activate(bv3, va0, 0);
-               sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-3.5, -3.5, 0.0)));
-               sm_fr.setModelColor(red);
-               render(tmp, rc30, size(triangles));
-          }
-
-          if (m_window.enabled(Window::RenderToggle::LOOP_BOX_SPLINE)) {
-               activate(lmp, PatchType::LOOP_BOX_SPLINE);
-               activate(bv2, va0, 0);
-               sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(0.0, -3.5, 0.0)));
-               sm_vx.setProjectionMatrix(projectionMatrix);
-               sm_fr.setLight(light);
-               sm_fr.setModelColor(blue);
-               render(lmp, rc2);
-          }
-
-          if (m_window.enabled(Window::RenderToggle::POINT_CLOUD)) {
-               activate(pcp);
-               activate(bv0, va0, 0);
-               sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(3.5, -3.5, 0.0)));
-               sm_vx.setProjectionMatrix(projectionMatrix);
-               si_gm.setProjectionMatrix(projectionMatrix);
-               si_gm.setRadius(radius);
-               si_fr.setLight(light);
-               si_fr.setModelColor(blue);
-               si_fr.setProjectionMatrix(projectionMatrix);
-               si_fr.setRadius(radius);
-               render(pcp, rc4, mesh.getNumberOfVertices());
-          }
-
           if (m_window.enabled(Window::RenderToggle::WIREFRAME)) {
                activate(va1);
                activate(wfp);
@@ -200,7 +126,11 @@ void Viewer::execute(int argc, char* argv[]) {
                render(wfp, rc31, size(triangles));
           }
 
+          if (m_window.enabled(Window::RenderToggle::WIREFRAME)) {
+          }
+
           glfwSwapBuffers(context);
+          glFinish();
      }
 }
 
