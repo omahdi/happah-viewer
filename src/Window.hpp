@@ -12,7 +12,9 @@
 #include <happah/graphics/glad.h>
 #include <happah/graphics/Viewport.hpp>
 #include <GLFW/glfw3.h>//NOTE: Glad must be included before GLFW.
+#include <array>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 
 namespace happah {
@@ -21,11 +23,6 @@ class Window {
 public:
      enum class RenderToggle {
           _NIL = 0,
-          QUINTIC,
-          LOOP_BOX_SPLINE,
-          SOLID_MESH,
-          SOLID_TRIS,
-          POINT_CLOUD,
           WIREFRAME,
           CHECKERBOARD,
           _COUNT
@@ -68,6 +65,7 @@ private:
      double m_y;
      bool m_quit_flag {false};
      std::uint32_t m_render_toggle {0};
+	 std::tuple<Point3D, Point3D, Point3D> m_eye[10] {};
 
      void onCursorPosEvent(double x, double y);
 

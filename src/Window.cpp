@@ -62,16 +62,31 @@ void Window::onWindowSizeEvent(hpuint width, hpuint height) { m_viewport.setSize
 
 void Window::onKeyEvent(int key, int scancode, int action, int mods) {
      if (action == GLFW_PRESS) {
+          unsigned i = 0;
           switch (key) {
                case GLFW_KEY_ESCAPE: set_quit_flag(); break;
                case GLFW_KEY_0: clear_render_toggles(); break;
-               case GLFW_KEY_1: toggle(RenderToggle::QUINTIC); break;
-               case GLFW_KEY_2: toggle(RenderToggle::LOOP_BOX_SPLINE); break;
-               case GLFW_KEY_3: toggle(RenderToggle::SOLID_MESH);break;
-               case GLFW_KEY_4: toggle(RenderToggle::SOLID_TRIS);break;
-               case GLFW_KEY_5: toggle(RenderToggle::POINT_CLOUD); break;
-               case GLFW_KEY_6: toggle(RenderToggle::WIREFRAME); break;
-               case GLFW_KEY_7: toggle(RenderToggle::CHECKERBOARD); break;
+               case GLFW_KEY_W: toggle(RenderToggle::WIREFRAME); break;
+               case GLFW_KEY_Q: toggle(RenderToggle::CHECKERBOARD); break;
+               case GLFW_KEY_9: i++;
+               case GLFW_KEY_8: i++;
+               case GLFW_KEY_7: i++;
+               case GLFW_KEY_6: i++;
+               case GLFW_KEY_5: i++;
+               case GLFW_KEY_4: i++;
+               case GLFW_KEY_3: i++;
+               case GLFW_KEY_2: i++;
+               case GLFW_KEY_1: {
+                    using std::get;
+                    if ((mods & GLFW_MOD_SHIFT) != 0) {
+                         m_eye[i] = m_viewport.getEye();
+                    } else {
+                         if (glm::length(get<2>(m_eye[i])) < 1e-6)
+                              std::cerr << "Error: Refusing to recall uninitialized view matrix #" << i << ".\n";
+                         else
+                              m_viewport.setEye(get<0>(m_eye[i]), get<1>(m_eye[i]), get<2>(m_eye[i]));
+                    break;
+               }
           }
      }
 }
