@@ -87,6 +87,7 @@ private:
      Point3D m_homeCenter {0.0, 0.0, 0.0};
      Point3D m_homePosition {0.0, 0.0, 1.0};
      Point3D m_homeUp {0.0, 1.0, 0.0};
+     bool m_ctrlPressed {false};
 
      void onCursorPosEvent(double x, double y);
 

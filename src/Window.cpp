@@ -40,10 +40,18 @@ Viewport& Window::getViewport() { return m_viewport; }
 
 void Window::onCursorPosEvent(double x, double y) {
      y = m_viewport.getHeight() - y;
-     if(glfwGetMouseButton(m_handle, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-          m_viewport.rotate(m_x, m_y, x, y);
-          m_x = x;
-          m_y = y;
+     if (glfwGetMouseButton(m_handle, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+          if (m_ctrlPressed) {
+               const hpreal step = 0.002;
+               Vector2D delta {step*(x-m_x), step*(m_y-y)};
+               m_viewport.translate(delta);
+               m_x = x;
+               m_y = y;
+          } else {
+               m_viewport.rotate(m_x, m_y, x, y);
+               m_x = x;
+               m_y = y;
+          }
      }
 }
 
@@ -56,14 +64,24 @@ void Window::onMouseButtonEvent(hpint button, hpint action, hpint mods) {
      }
 }
 
-void Window::onScrollEvent(double xoffset, double yoffset){
-     m_viewport.zoom(yoffset * 0.01);
+void Window::onScrollEvent(double xoffset, double yoffset) {
+     if (!m_ctrlPressed) {
+          m_viewport.zoom(yoffset * 0.02);
+     } else {
+          float delta = yoffset * 0.1;
+          Point3D viewDir = m_viewport.getViewDirection();
+          Vector3D step {delta * viewDir.x, delta * viewDir.y, delta * viewDir.z};
+          m_viewport.translate(step);
+     }
 }
 
 void Window::onWindowSizeEvent(hpuint width, hpuint height) { m_viewport.setSize(width, height); }
 
 void Window::onKeyEvent(int key, int scancode, int action, int mods) {
      using std::get;
+     if (key == GLFW_KEY_LEFT_CONTROL || key == GLFW_KEY_RIGHT_CONTROL) {
+          m_ctrlPressed = (action != GLFW_RELEASE);
+     }
      if (action == GLFW_PRESS) {
           unsigned i = 0;
           switch (key) {
