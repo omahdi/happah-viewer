@@ -48,42 +48,38 @@ void Viewer::execute(int argc, char* argv[]) {
 
      std::cout << "INFO: Importing " << argv[1] << '.' << std::endl;
 
-     auto green = hpcolor(0.0, 1.0, 0.0, 1.0);
-     auto red = hpcolor(1.0, 0.0, 0.0, 1.0);
-     auto blue = hpcolor(0.0, 0.0, 1.0, 1.0);
+     const auto green  = hpcolor(0.0, 1.0, 0.0, 1.0);
+     const auto red    = hpcolor(1.0, 0.0, 0.0, 1.0);
+     const auto blue   = hpcolor(0.0, 0.0, 1.0, 1.0);
+     const auto grey40 = hpcolor(0.4, 0.4, 0.4, 1.0);
+     const auto white  = hpcolor(1.0, 1.0, 1.0, 1.0);
+     const auto black  = hpcolor(1.0, 1.0, 1.0, 1.0);
 
      auto content = format::off::read(argv[1]);
      auto mesh = make_triangle_mesh<VertexP3>(content);
      auto graph = TriangleMesh<VertexP3, Format::DIRECTED_EDGE>(mesh);
      auto edgeColors = std::vector<hpcolor>(3 * size(mesh), blue);
      auto vertexColors = std::vector<hpcolor>(3 * size(mesh), blue);
+     // Iterate over boundary edges and color their opposites
+     for (auto ei = 3*graph.getNumberOfTriangles(), num_edges = graph.getNumberOfEdges(); ei < num_edges; ei++)
+          edgeColors[graph.getEdge(ei).opposite] = red;
      auto triangles = make_triangle_array(mesh);
 
-     bool have_disk_mesh {false};
-     TriangleMesh<VertexP3> disk_mesh;
+     std::vector<Point2D> proj_coords, hyp_coords;
+     bool have_proj_coords {false}, have_hyp_coords {false};
      if (argc >= 3) {
-          std::cout << "INFO: Reading additional mesh instance (disk topology)\n";
-          disk_mesh = make_triangle_mesh<VertexP3>(format::off::read(argv[2]));
-          if (mesh.getNumberOfVertices() != disk_mesh.getNumberOfVertices())
-               throw std::runtime_error("Expected mesh instances with matching number of vertices");
-          have_disk_mesh = true;
-          // Iterate over boundary edges and color their opposites
-          for (auto ei = 3*graph.getNumberOfTriangles(), num_edges = graph.getNumberOfEdges(); ei < num_edges; ei++)
-               edgeColors[graph.getEdge(ei).opposite] = red;
-     } else {
-          // Compute reduced cut locus (based on Dijkstra's algorithm on dual graph)
-          for(auto e : trim(graph, cut(graph))){
-               edgeColors[e] = red;
-               visit_spokes(graph.getEdges(), e, [&](auto e) {
-                    static constexpr hpuint o[3] = { 1, 2, 0 };
-
-                    auto f = graph.getEdge(e).opposite;
-                    auto t = make_triangle_index(f);
-                    auto i = make_edge_offset(f);
-                    vertexColors[3 * t + o[i]] = red;
-                    vertexColors[e] = red;
-               });
-          }
+          std::cout << "INFO: Reading additional coordinates (projective disk)\n";
+          proj_coords = format::xyz::read<std::vector<Point2D>>(argv[2]);
+          if (mesh.getNumberOfVertices() != proj_coords.size())
+               throw std::runtime_error("Expected coordinates and mesh instance with matching number of vertices.");
+          have_proj_coords = true;
+     }
+     if (argc >= 4) {
+          std::cout << "INFO: Reading additional coordinates (conformal disk)\n";
+          hyp_coords = format::xyz::read<std::vector<Point2D>>(argv[3]);
+          if (mesh.getNumberOfVertices() != hyp_coords.size())
+               throw std::runtime_error("Expected coordinates and mesh instance with matching number of vertices.");
+          have_hyp_coords = true;
      }
 
      std::cout << "INFO: Making shaders." << std::endl;
@@ -125,16 +121,21 @@ void Viewer::execute(int argc, char* argv[]) {
      auto rc31 = make_render_context(va1, PatchType::TRIANGLE);
 
      std::cout << "INFO: setting up checkerboard shaders and buffers.\n";
-     auto cb_vx = make_checkerboard_vertex_shader();
-     auto cb_gm = make_checkerboard_geometry_shader();
-     auto cb_fr = make_checkerboard_fragment_shader();
-     auto cbp = make_program("checkerboard pattern", cb_vx, cb_gm, cb_fr);
-     auto bv_hypcoord = make_buffer(disk_mesh.getVertices());
+     auto cb_euc_vx = make_euclidean_checkerboard_vertex_shader();
+     auto cb_euc_gm = make_euclidean_checkerboard_geometry_shader();
+     auto cb_euc_fr = make_euclidean_checkerboard_fragment_shader();
+     auto cb_euc_p = make_program("Euclidean checkerboard pattern", cb_euc_vx, cb_euc_gm, cb_euc_fr);
+     auto cb_hyp_vx = make_hyperbolic_checkerboard_vertex_shader();
+     auto cb_hyp_gm = make_hyperbolic_checkerboard_geometry_shader();
+     auto cb_hyp_fr = make_hyperbolic_checkerboard_fragment_shader();
+     auto cb_hyp_p = make_program("Hyperbolic checkerboard pattern", cb_hyp_vx, cb_hyp_gm, cb_hyp_fr);
+     auto bv_projcoord = make_buffer(proj_coords);
+     auto bv_hypcoord = make_buffer(hyp_coords);
      auto va_chkb = make_vertex_array();
      auto attr_cb_position = make_attribute(0, 4, DataType::FLOAT);
-     auto attr_cb_hyp_coord = make_attribute(1, 3, DataType::FLOAT);
+     auto attr_cb_uv_coord = make_attribute(1, 2, DataType::FLOAT);
      describe(va_chkb, 0, attr_cb_position);
-     describe(va_chkb, 1, attr_cb_hyp_coord);
+     describe(va_chkb, 1, attr_cb_uv_coord);
      auto rc_chkb = make_render_context(va_chkb, bi0, PatchType::TRIANGLE);
 
      std::cout << "INFO: Setting up scene." << std::endl;
@@ -142,10 +143,10 @@ void Viewer::execute(int argc, char* argv[]) {
      auto bandWidth = 1.0;
      auto beamDirection = Vector3D(0.0, 0.0, 1.0);
      auto beamOrigin = Point3D(10.0, 0.0, 0.0);
-     auto edgeWidth = 0.006; //0.02;
+     auto edgeWidth = 0.008; //0.02;
      auto level0 = std::array<hpreal, 2>({ 100, 100 });
      auto level1 = std::array<hpreal, 4>({ 60, 60, 60, 60 });
-     auto radius = 0.05;
+     auto radius = 0.01;
      Vector3D dim = calcBB(mesh.getVertices());
      float spacing = 1.0;
 
@@ -153,9 +154,12 @@ void Viewer::execute(int argc, char* argv[]) {
 
      glfwSwapInterval(1);
      look_at(viewport, mesh.getVertices());
+     m_window.setHome();
      glClearColor(1, 1, 1, 1);
-     while(!glfwWindowShouldClose(context) && !m_window.quit_flag()) {
+     while(!glfwWindowShouldClose(context) && !m_window.quitFlag()) {
           glfwPollEvents();
+          if (m_window.quitFlag())
+               break;
           glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
           glEnable(GL_DEPTH_TEST);
 
@@ -179,17 +183,29 @@ void Viewer::execute(int argc, char* argv[]) {
                render(wfp, rc31, size(triangles));
           }
 
-          if (have_disk_mesh && m_window.enabled(Window::RenderToggle::CHECKERBOARD)) {
+          if (have_proj_coords && m_window.enabled(Window::RenderToggle::CHECKERBOARD_EUC)) {
                activate(va_chkb);
-               activate(cbp);
+               activate(cb_euc_p);
+               activate(bv0, va_chkb, 0);
+               activate(bv_projcoord, va_chkb, 1);
+               cb_euc_vx.setModelViewMatrix(viewMatrix);
+               cb_euc_vx.setProjectionMatrix(projectionMatrix);
+               cb_euc_fr.setColors(hpcolor(0.0, 0.0, 0.0, 1.0), hpcolor(1.0, 1.0, 1.0, 1.0));
+               cb_euc_fr.setPeriod(hpvec2(0.05, 0.05));
+               cb_euc_fr.setLight(light);
+               render(cb_euc_p, rc_chkb);
+          }
+          if (have_hyp_coords && m_window.enabled(Window::RenderToggle::CHECKERBOARD_HYP)) {
+               activate(va_chkb);
+               activate(cb_hyp_p);
                activate(bv0, va_chkb, 0);
                activate(bv_hypcoord, va_chkb, 1);
-               cb_vx.setModelViewMatrix(viewMatrix);
-               cb_vx.setProjectionMatrix(projectionMatrix);
-               cb_fr.setColors(hpcolor(0.0, 0.0, 0.0, 1.0), hpcolor(1.0, 1.0, 1.0, 1.0));
-               cb_fr.setPeriod(hpvec2(0.05, 0.05));
-               cb_fr.setLight(light);
-               render(cbp, rc_chkb);
+               cb_hyp_vx.setModelViewMatrix(viewMatrix);
+               cb_hyp_vx.setProjectionMatrix(projectionMatrix);
+               cb_hyp_fr.setColors(hpcolor(0.0, 0.0, 0.0, 1.0), hpcolor(1.0, 1.0, 1.0, 1.0));
+               cb_hyp_fr.setPeriod(hpvec2(0.05, 0.05));
+               cb_hyp_fr.setLight(light);
+               render(cb_hyp_p, rc_chkb);
           }
 
           glfwSwapBuffers(context);
