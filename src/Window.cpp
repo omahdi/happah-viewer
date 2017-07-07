@@ -8,13 +8,15 @@
 
 #include <stdexcept>
 
+#include <happah/format.h>
+
 #include "Window.hpp"
 
 namespace happah {
 
 std::unordered_map<GLFWwindow*, Window*> Window::s_windows = std::unordered_map<GLFWwindow*, Window*>();
 
-Window::Window(hpuint width, hpuint height, const std::string& title) 
+Window::Window(hpuint width, hpuint height, const std::string& title)
      : m_handle(glfwCreateWindow(width, height, title.c_str(), 0, 0)), m_viewport(width, height) {
      if(m_handle == 0) throw std::runtime_error("Failed to create window.");
      s_windows[m_handle] = this;
@@ -53,7 +55,7 @@ void Window::onMouseButtonEvent(hpint button, hpint action, hpint mods) {
           m_y = m_viewport.getHeight() - m_y;
      }
 }
-     
+
 void Window::onScrollEvent(double xoffset, double yoffset){
      m_viewport.zoom(yoffset * 0.01);
 }
@@ -61,13 +63,23 @@ void Window::onScrollEvent(double xoffset, double yoffset){
 void Window::onWindowSizeEvent(hpuint width, hpuint height) { m_viewport.setSize(width, height); }
 
 void Window::onKeyEvent(int key, int scancode, int action, int mods) {
+     using std::get;
      if (action == GLFW_PRESS) {
           unsigned i = 0;
           switch (key) {
-               case GLFW_KEY_ESCAPE: set_quit_flag(); break;
-               case GLFW_KEY_0: clear_render_toggles(); break;
+               case GLFW_KEY_ESCAPE: setQuitFlag(); break;
+               case GLFW_KEY_X: clearRenderToggles(); break;
                case GLFW_KEY_W: toggle(RenderToggle::WIREFRAME); break;
-               case GLFW_KEY_Q: toggle(RenderToggle::CHECKERBOARD); break;
+               case GLFW_KEY_Q:
+                    if ((mods & GLFW_MOD_SHIFT) != 0) {
+                         disable(RenderToggle::CHECKERBOARD_EUC);
+                         toggle(RenderToggle::CHECKERBOARD_HYP);
+                    } else {
+                         disable(RenderToggle::CHECKERBOARD_HYP);
+                         toggle(RenderToggle::CHECKERBOARD_EUC);
+                    }
+                    break;
+               case GLFW_KEY_0: home(); break;
                case GLFW_KEY_9: i++;
                case GLFW_KEY_8: i++;
                case GLFW_KEY_7: i++;
@@ -77,7 +89,6 @@ void Window::onKeyEvent(int key, int scancode, int action, int mods) {
                case GLFW_KEY_3: i++;
                case GLFW_KEY_2: i++;
                case GLFW_KEY_1: {
-                    using std::get;
                     if ((mods & GLFW_MOD_SHIFT) != 0) {
                          m_eye[i] = m_viewport.getEye();
                     } else {
@@ -85,6 +96,33 @@ void Window::onKeyEvent(int key, int scancode, int action, int mods) {
                               std::cerr << "Error: Refusing to recall uninitialized view matrix #" << i << ".\n";
                          else
                               m_viewport.setEye(get<0>(m_eye[i]), get<1>(m_eye[i]), get<2>(m_eye[i]));
+                    }
+                    break;
+               }
+               case GLFW_KEY_S: {
+                    if ((mods & GLFW_MOD_CONTROL) != 0) {
+                         std::cout << "Storing camera view records...\n";
+                         std::vector<Point3D> buf;
+                         buf.reserve(3*m_eye.size());
+                         for (const auto& eye : m_eye) {
+                              buf.push_back(get<0>(eye));
+                              buf.push_back(get<1>(eye));
+                              buf.push_back(get<2>(eye));
+                         }
+                         format::hph::write(buf, "stored-views.hph");
+                    }
+                    break;
+               }
+               case GLFW_KEY_L: {
+                    if ((mods & GLFW_MOD_CONTROL) != 0) {
+                         std::cout << "Loading camera view records...\n";
+                         auto buf = format::hph::read<std::vector<Point3D>>("stored-views.hph");
+                         for (unsigned i = 0; i < m_eye.size(); i++) {
+                              get<0>(m_eye[i]) = buf[3*i + 0];
+                              get<1>(m_eye[i]) = buf[3*i + 1];
+                              get<2>(m_eye[i]) = buf[3*i + 2];
+                         }
+                    }
                     break;
                }
           }
@@ -96,8 +134,8 @@ void onCursorPosEvent(GLFWwindow* handle, double x, double y) { Window::s_window
 void onFramebufferSizeEvent(GLFWwindow* handle, int width, int height) { Window::s_windows[handle]->onFramebufferSizeEvent(width, height); }
 
 void onMouseButtonEvent(GLFWwindow* handle, int button, int action, int mods) { Window::s_windows[handle]->onMouseButtonEvent(button, action, mods); }
-     
-void onScrollEvent(GLFWwindow* handle, double xoffset, double yoffset){ Window::s_windows[handle]->onScrollEvent(xoffset, yoffset); } 
+
+void onScrollEvent(GLFWwindow* handle, double xoffset, double yoffset){ Window::s_windows[handle]->onScrollEvent(xoffset, yoffset); }
 
 void onWindowSizeEvent(GLFWwindow* handle, int width, int height) { Window::s_windows[handle]->onWindowSizeEvent(width, height); }
 

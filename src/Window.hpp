@@ -24,29 +24,47 @@ public:
      enum class RenderToggle {
           _NIL = 0,
           WIREFRAME,
-          CHECKERBOARD,
+          CHECKERBOARD_EUC,
+          CHECKERBOARD_HYP,
           _COUNT
      };
      static_assert(static_cast<int>(RenderToggle::_COUNT) <= 32);
 
+     void disable(RenderToggle _what) {
+          assert(_what > RenderToggle::_NIL && _what < RenderToggle::_COUNT);
+          m_renderToggle &= ~(1 << static_cast<int>(_what));
+     }
+     void enable(RenderToggle _what) {
+          assert(_what > RenderToggle::_NIL && _what < RenderToggle::_COUNT);
+          m_renderToggle |= (1 << static_cast<int>(_what));
+     }
      void toggle(RenderToggle _what) {
           assert(_what > RenderToggle::_NIL && _what < RenderToggle::_COUNT);
-          m_render_toggle ^= (1 << static_cast<int>(_what));
+          m_renderToggle ^= (1 << static_cast<int>(_what));
      }
      bool enabled(RenderToggle _what) const {
           assert(_what > RenderToggle::_NIL && _what < RenderToggle::_COUNT);
-          return (m_render_toggle & (1 << static_cast<int>(_what))) != 0;
+          return (m_renderToggle & (1 << static_cast<int>(_what))) != 0;
      }
-     void clear_render_toggles() {
-          m_render_toggle = 0;
+     void clearRenderToggles() {
+          m_renderToggle = 0;
      }
-     void set_render_toggles() {
-          clear_render_toggles();
-          m_render_toggle = ~m_render_toggle;
+     void setRenderToggles() {
+          clearRenderToggles();
+          m_renderToggle = ~m_renderToggle;
      }
-     void set_quit_flag() { m_quit_flag = true; }
-     void clear_quit_flag() { m_quit_flag = false; }
-     bool quit_flag() const { return m_quit_flag; }
+     void setQuitFlag() { m_quitFlag = true; }
+     void clearQuitFlag() { m_quitFlag = false; }
+     bool quitFlag() const { return m_quitFlag; }
+     void setHome() {
+          auto eye = m_viewport.getEye();
+          m_homeCenter = std::get<0>(eye);
+          m_homePosition = std::get<1>(eye);
+          m_homeUp = std::get<2>(eye);
+     }
+     void home() {
+          m_viewport.setEye(m_homeCenter, m_homePosition, m_homeUp);
+     }
 
      Window(hpuint width, hpuint height, const std::string& title);
 
@@ -63,16 +81,19 @@ private:
      Viewport m_viewport;
      double m_x;//mouse coordinates
      double m_y;
-     bool m_quit_flag {false};
-     std::uint32_t m_render_toggle {0};
-	 std::tuple<Point3D, Point3D, Point3D> m_eye[10] {};
+     bool m_quitFlag {false};
+     std::uint32_t m_renderToggle {0};
+     std::array<std::tuple<Point3D, Point3D, Point3D>, 9> m_eye {};
+     Point3D m_homeCenter {0.0, 0.0, 0.0};
+     Point3D m_homePosition {0.0, 0.0, 1.0};
+     Point3D m_homeUp {0.0, 1.0, 0.0};
 
      void onCursorPosEvent(double x, double y);
 
      void onFramebufferSizeEvent(hpuint width, hpuint height);
 
      void onMouseButtonEvent(hpint button, hpint action, hpint mods);
-     
+
      void onScrollEvent(double xoffset, double yoffset);
 
      void onWindowSizeEvent(hpuint width, hpuint height);
@@ -84,7 +105,7 @@ private:
      friend void onFramebufferSizeEvent(GLFWwindow* handle, int width, int height);
 
      friend void onMouseButtonEvent(GLFWwindow* handle, int button, int action, int mods);
-     
+
      friend void onScrollEvent(GLFWwindow* handle, double xoffset, double yoffset);
 
      friend void onWindowSizeEvent(GLFWwindow* handle, int width, int height);
@@ -97,7 +118,7 @@ void onCursorPosEvent(GLFWwindow* handle, double x, double y);
 void onFramebufferSizeEvent(GLFWwindow* handle, int width, int height);
 
 void onMouseButtonEvent(GLFWwindow* handle, int button, int action, int mods);
-     
+
 void onScrollEvent(GLFWwindow* handle, double xoffset, double yoffset);
 
 void onWindowSizeEvent(GLFWwindow* handle, int width, int height);
