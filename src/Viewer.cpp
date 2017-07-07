@@ -59,10 +59,14 @@ void Viewer::execute(int argc, char* argv[]) {
      auto mesh = make_triangle_mesh<VertexP3>(content);
      auto graph = TriangleMesh<VertexP3, Format::DIRECTED_EDGE>(mesh);
      auto edgeColors = std::vector<hpcolor>(3 * size(mesh), blue);
+     //auto edgeFlags = std::vector<GLint>(3 * size(mesh), 0);
      auto vertexColors = std::vector<hpcolor>(3 * size(mesh), blue);
      // Iterate over boundary edges and color their opposites
-     for (auto ei = 3*graph.getNumberOfTriangles(), num_edges = graph.getNumberOfEdges(); ei < num_edges; ei++)
+     for (auto ei = 3*graph.getNumberOfTriangles(), num_edges = graph.getNumberOfEdges(); ei < num_edges; ei++) {
           edgeColors[graph.getEdge(ei).opposite] = red;
+          //edgeFlags[graph.getEdge(ei).opposite] = 1;
+          //std::cout << "- setting edge flag for opposite of " << ei << " = " << graph.getEdge(ei).opposite << "\n";
+     }
      auto triangles = make_triangle_array(mesh);
 
      std::vector<Point2D> proj_coords, hyp_coords;
@@ -84,37 +88,37 @@ void Viewer::execute(int argc, char* argv[]) {
 
      std::cout << "INFO: Making shaders." << std::endl;
 
-     auto nm_gm = make_geometry_shader("shaders/normals.g.glsl");
-     auto sm_fr = make_simple_fragment_shader();
-     auto sm_vx = make_simple_vertex_shader();
+     //auto nm_gm = make_geometry_shader("shaders/normals.g.glsl");
+     //auto sm_fr = make_simple_fragment_shader();
+     //auto sm_vx = make_simple_vertex_shader();
      auto wf_fr = make_wireframe_fragment_shader();
      auto wf_gm = make_geometry_shader("shaders/wireframe.g.glsl");
      auto wf_vx = make_wireframe_vertex_shader();
 
      std::cout << "INFO: Making programs." << std::endl;
 
-     auto tmp = make_program("triangle mesh", sm_vx, nm_gm, sm_fr);
+     //auto tmp = make_program("triangle mesh", sm_vx, nm_gm, sm_fr);
      auto wfp = make_program("wireframe triangle mesh", wf_vx, wf_gm, wf_fr);
 
      std::cout << "INFO: Making buffers." << std::endl;
 
      auto bv0 = make_buffer(mesh.getVertices());
-     auto bv3 = make_buffer(triangles.getVertices());
      auto bi0 = make_buffer(mesh.getIndices());
      auto be3 = make_buffer(edgeColors);
-     auto bc3 = make_buffer(vertexColors);
+     //auto bc3 = make_buffer(vertexColors);
+     auto bv3 = make_buffer(triangles.getVertices());
 
      std::cout << "INFO: Making vertex arrays." << std::endl;
 
      auto position = make_attribute(0, 4, DataType::FLOAT);
+     //auto edgeFlag = make_attribute(1, 1, DataType::INT);
      auto edgeColor = make_attribute(1, 4, DataType::FLOAT);
-     auto vertexColor = make_attribute(2, 4, DataType::FLOAT);
+     //auto vertexColor = make_attribute(2, 4, DataType::FLOAT);
 
      auto va1 = make_vertex_array();
-
      describe(va1, 0, position);
      describe(va1, 1, edgeColor);
-     describe(va1, 2, vertexColor);
+     //describe(va1, 2, vertexColor);
 
      std::cout << "INFO: Making render contexts." << std::endl;
 
@@ -143,7 +147,7 @@ void Viewer::execute(int argc, char* argv[]) {
      auto bandWidth = 1.0;
      auto beamDirection = Vector3D(0.0, 0.0, 1.0);
      auto beamOrigin = Point3D(10.0, 0.0, 0.0);
-     auto edgeWidth = 0.008; //0.02;
+     auto edgeWidth = 0.005; //0.02;
      auto level0 = std::array<hpreal, 2>({ 100, 100 });
      auto level1 = std::array<hpreal, 4>({ 60, 60, 60, 60 });
      auto radius = 0.01;
@@ -173,7 +177,7 @@ void Viewer::execute(int argc, char* argv[]) {
                activate(wfp);
                activate(bv3, va1, 0);
                activate(be3, va1, 1);
-               activate(bc3, va1, 2);
+               //activate(bc3, va1, 2);
                wf_vx.setModelViewMatrix(viewMatrix);
                wf_vx.setProjectionMatrix(projectionMatrix);
                wf_fr.setEdgeColor(red);
