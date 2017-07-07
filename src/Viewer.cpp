@@ -4,7 +4,7 @@
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-// 2017.07 - Hedwig Amberg    - modified scroll to zoom or walk, arrow keys for strafing.
+// 2017.07 - Hedwig Amberg    - add new shader for coloring triangles individualy.
 
 #include <happah/format.h>
 #include <happah/geometries/converters.h>
@@ -66,6 +66,7 @@ void Viewer::execute(int argc, char* argv[]) {
      auto mesh = make_triangle_mesh<VertexP3>(content);
      auto graph = TriangleMesh<VertexP3, Format::DIRECTED_EDGE>(mesh);
      auto edgeColors = std::vector<hpcolor>(3 * size(mesh), blue);
+     auto triangleColors = std::vector<hpcolor>(3 * size(mesh), blue);
      auto vertexColors = std::vector<hpcolor>(3 * size(mesh), blue);
      auto triangles = make_triangle_array(mesh);
      auto boxes = make_loop_box_spline_mesh(mesh);
@@ -86,6 +87,13 @@ void Viewer::execute(int argc, char* argv[]) {
           });
      }
      
+     //TODO: only for testing !!!
+     for(int i = 0; i < size(triangleColors); i += 3){
+          triangleColors[i] = red;
+          triangleColors[i+1] = blue;
+          triangleColors[i+2] = green;
+     }
+     
      std::cout << "INFO: Making shaders." << std::endl;
 
      auto hl_fr = make_highlight_lines_fragment_shader();
@@ -101,6 +109,9 @@ void Viewer::execute(int argc, char* argv[]) {
      auto ed_fr = make_edge_fragment_shader();
      auto ed_gm = make_geometry_shader("shaders/edge.g.glsl");
      auto ed_vx = make_edge_vertex_shader();
+     auto tr_vx = make_triangles_vertex_shader();
+     auto tr_gm = make_geometry_shader("shaders/triangles.g.glsl");
+     auto tr_fr = make_triangles_fragment_shader();
 
      std::cout << "INFO: Making programs." << std::endl;
 
@@ -110,6 +121,7 @@ void Viewer::execute(int argc, char* argv[]) {
      auto tmp = make_program("triangle mesh", sm_vx, nm_gm, sm_fr);
      auto wfp = make_program("wireframe triangle mesh", sm_vx, wf_gm, wf_fr);
      auto edp = make_program("edges triangle mesh", ed_vx, ed_gm, ed_fr);
+     auto trp = make_program("triangle colors mesh", tr_vx, tr_gm, tr_fr);
 
      std::cout << "INFO: Making buffers." << std::endl;
 
@@ -122,12 +134,14 @@ void Viewer::execute(int argc, char* argv[]) {
      auto bi2 = make_buffer(boxes.getIndices());
      auto be3 = make_buffer(edgeColors);
      auto bc3 = make_buffer(vertexColors);
+     auto bt3 = make_buffer(triangleColors);
 
      std::cout << "INFO: Making vertex arrays." << std::endl;
 
      auto position = make_attribute(0, 4, DataType::FLOAT);
      auto edgeColor = make_attribute(1, 4, DataType::FLOAT);
      auto vertexColor = make_attribute(2, 4, DataType::FLOAT);
+     auto triangleColor = make_attribute(3, 4, DataType::FLOAT);
 
      auto va0 = make_vertex_array();
      auto va1 = make_vertex_array();
@@ -136,6 +150,7 @@ void Viewer::execute(int argc, char* argv[]) {
      describe(va1, 0, position);
      describe(va1, 1, edgeColor);
      describe(va1, 2, vertexColor);
+     describe(va1, 3, triangleColor);
 
      std::cout << "INFO: Making render contexts." << std::endl;
 
@@ -178,7 +193,7 @@ void Viewer::execute(int argc, char* argv[]) {
           auto tempOrigin = viewMatrix * Point4D(beamOrigin, 1.0);
 
           activate(va0);
-
+          
           activate(qpp, PatchType::QUINTIC);
           activate(bv1, va0, 0);
           sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(lengths.x + padding.x, 0.0, 0.0)));
@@ -191,7 +206,7 @@ void Viewer::execute(int argc, char* argv[]) {
           hl_fr.setBeam(Point3D(tempOrigin) / tempOrigin.w, glm::normalize(Vector3D(tempDirection)));
           hl_fr.setLight(light);
           render(qpp, rc1);
-
+          
           activate(tmp);
           activate(bv0, va0, 0);
           sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-lengths.x - padding.x, 0.0, 0.0)));
@@ -236,7 +251,15 @@ void Viewer::execute(int argc, char* argv[]) {
           render(wfp, rc0);
           */
           activate(va1);
-
+          /*
+          activate(trp);
+          activate(bv3, va1, 0);
+          activate(bt3, va1, 1);
+          tr_vx.setModelViewMatrix(viewMatrix);
+          tr_vx.setProjectionMatrix(projectionMatrix);
+          tr_fr.setLight(light);
+          render(trp, rc31, size(triangles));
+          */
           activate(edp);
           activate(bv3, va1, 0);
           activate(be3, va1, 1);
@@ -247,7 +270,7 @@ void Viewer::execute(int argc, char* argv[]) {
           ed_fr.setLight(light);
           ed_fr.setModelColor(blue);
           render(edp, rc31, size(triangles));
-
+          
           glfwSwapBuffers(context);
      }
 }
