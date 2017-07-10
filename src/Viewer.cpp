@@ -138,19 +138,15 @@ void Viewer::execute(int argc, char* argv[]) {
 
      std::cout << "INFO: Making vertex arrays." << std::endl;
 
+     auto edgeColor = make_attribute(2, 4, DataType::FLOAT);
      auto position = make_attribute(0, 4, DataType::FLOAT);
-     auto edgeColor = make_attribute(1, 4, DataType::FLOAT);
-     auto vertexColor = make_attribute(2, 4, DataType::FLOAT);
-     auto triangleColor = make_attribute(3, 4, DataType::FLOAT);
+     auto vertexColor = make_attribute(1, 4, DataType::FLOAT);
 
      auto va0 = make_vertex_array();
-     auto va1 = make_vertex_array();
 
      describe(va0, 0, position);
-     describe(va1, 0, position);
-     describe(va1, 1, edgeColor);
-     describe(va1, 2, vertexColor);
-     describe(va1, 3, triangleColor);
+     describe(va0, 1, vertexColor);
+     describe(va0, 2, edgeColor);
 
      std::cout << "INFO: Making render contexts." << std::endl;
 
@@ -158,7 +154,7 @@ void Viewer::execute(int argc, char* argv[]) {
      auto rc1 = make_render_context(va0, bi1, PatchType::QUINTIC);
      auto rc2 = make_render_context(va0, bi2, PatchType::LOOP_BOX_SPLINE);
      auto rc30 = make_render_context(va0, PatchType::TRIANGLE);
-     auto rc31 = make_render_context(va1, PatchType::TRIANGLE);
+     auto rc31 = make_render_context(va0, PatchType::TRIANGLE);
      auto rc4 = make_render_context(va0, PatchType::POINT);
 
      std::cout << "INFO: Setting up scene." << std::endl;
@@ -169,8 +165,8 @@ void Viewer::execute(int argc, char* argv[]) {
      auto box = make_axis_aligned_bounding_box(mesh);
      auto edgeWidth = 0.006; //0.02;//TODO: 0.1 * average height?
      auto lengths = std::get<1>(box) - std::get<0>(box);
-     auto level0 = std::array<hpreal, 2>({ 100, 100 });
-     auto level1 = std::array<hpreal, 4>({ 60, 60, 60, 60 });
+     auto level0 = std::array<hpreal, 2>({ 50, 50 });
+     auto level1 = std::array<hpreal, 4>({ 30, 30, 30, 30 });
      auto padding = hpreal(0.1) * lengths;
      auto radius = 0.05;
 
@@ -239,31 +235,29 @@ void Viewer::execute(int argc, char* argv[]) {
           si_fr.setProjectionMatrix(projectionMatrix);
           si_fr.setRadius(radius);
           render(pcp, rc4, mesh.getNumberOfVertices());
-          /*
+          
           activate(wfp);
           activate(bv0, va0, 0);
-          sm_vx.setModelViewMatrix(viewMatrix);
+          sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-lengths.x - padding.x, lengths.y + padding.y, 0.0)));
           sm_vx.setProjectionMatrix(projectionMatrix);
           wf_fr.setEdgeWidth(edgeWidth);
           wf_fr.setEdgeColor(red);
           wf_fr.setLight(light);
           wf_fr.setModelColor(blue);
           render(wfp, rc0);
-          */
-          activate(va1);
-          /*
+          
           activate(trp);
-          activate(bv3, va1, 0);
-          activate(bt3, va1, 1);
-          tr_vx.setModelViewMatrix(viewMatrix);
+          activate(bv3, va0, 0);
+          activate(bt3, va0, 1);
+          tr_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(0.0, lengths.y + padding.y, 0.0)));
           tr_vx.setProjectionMatrix(projectionMatrix);
           tr_fr.setLight(light);
           render(trp, rc31, size(triangles));
-          */
+          
           activate(edp);
-          activate(bv3, va1, 0);
-          activate(be3, va1, 1);
-          activate(bc3, va1, 2);
+          activate(bv3, va0, 0);
+          activate(bc3, va0, 1);
+          activate(be3, va0, 2);
           ed_vx.setModelViewMatrix(viewMatrix);
           ed_vx.setProjectionMatrix(projectionMatrix);
           ed_fr.setEdgeWidth(edgeWidth);
