@@ -42,19 +42,19 @@ void Viewer::execute(int argc, char* argv[]) {
      
      auto content = format::off::read(argv[1]);
      auto mesh = make_triangle_mesh<VertexP3>(content);
-     auto graph = TriangleMesh<VertexP3, Format::DIRECTED_EDGE>(mesh);
+     auto graph = make_triangle_graph(mesh);
      auto edgeColors = std::vector<hpcolor>(3 * size(mesh), blue);
      auto triangleColors = std::vector<hpcolor>(3 * size(mesh), blue);
      auto vertexColors = std::vector<hpcolor>(3 * size(mesh), blue);
      auto triangles = make_triangle_array(mesh);
      auto boxes = make_loop_box_spline_mesh(mesh);
-     auto quartic = make_spline_surface(TriangleMesh<VertexP3, Format::DIRECTED_EDGE>(mesh));
+     auto quartic = make_spline_surface(graph);
      //auto mesh = make_triangle_mesh(quartic, 4);
      auto quintic = elevate(quartic);
 
      for(auto e : trim(graph, cut(graph))){
           edgeColors[e] = red;
-          visit_spokes(graph.getEdges(), e, [&](auto e) {
+          visit_spokes(make_spokes_enumerator(graph.getEdges(), e), [&](auto e) {
                static constexpr hpuint o[3] = { 1, 2, 0 };
                
                auto f = graph.getEdge(e).opposite;
