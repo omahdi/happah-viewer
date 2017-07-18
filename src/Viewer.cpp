@@ -54,7 +54,7 @@ void Viewer::execute(int argc, char* argv[]) {
 
      for(auto e : trim(graph, cut(graph))){
           edgeColors[e] = red;
-          visit_spokes(trg::make_spokes_enumerator(graph.getEdges(), e), [&](auto e) {
+          visit_spokes(make_spokes_enumerator(graph.getEdges(), e), [&](auto e) {
                static constexpr hpuint o[3] = { 1, 2, 0 };
                
                auto f = graph.getEdge(e).opposite;
