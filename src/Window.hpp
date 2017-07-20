@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <happah/Happah.h>
+#include <happah/Happah.hpp>
 #include <happah/graphics/glad.h>
 #include <happah/graphics/Viewport.hpp>
 #include <GLFW/glfw3.h>//NOTE: Glad must be included before GLFW.

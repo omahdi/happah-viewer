@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <happah/Happah.h>
+#include <happah/Happah.hpp>
 #include <string>
 
 #include "Window.hpp"

@@ -6,12 +6,12 @@
 
 // 2017.07 - Hedwig Amberg    - add new shader for coloring triangles individualy.
 
-#include <happah/format.h>
-#include <happah/geometries/converters.h>
-#include <happah/geometries/LoopBoxSplineMesh.h>
-#include <happah/geometries/TriangleArray.h>
+#include <happah/format.hpp>
+#include <happah/geometries/converters.hpp>
+#include <happah/geometries/LoopBoxSplineMesh.hpp>
+#include <happah/geometries/TriangleArray.hpp>
 #include <happah/graphics.hpp>
-#include <happah/math/Space.h>
+#include <happah/math/Space.hpp>
 #include <GLFW/glfw3.h>//NOTE: Glad must be included before GLFW.
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
