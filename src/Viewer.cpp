@@ -34,12 +34,12 @@ void Viewer::execute(int argc, char* argv[]) {
      auto context = m_window.getContext();
      auto& viewport = m_window.getViewport();
 
-     std::cout << "INFO: Importing " << argv[1] << '.' << std::endl;
-
+     auto blue = hpcolor(0.0, 0.0, 1.0, 1.0);
      auto green = hpcolor(0.0, 1.0, 0.0, 1.0);
      auto red = hpcolor(1.0, 0.0, 0.0, 1.0);
-     auto blue = hpcolor(0.0, 0.0, 1.0, 1.0);
      
+     std::cout << "INFO: Importing " << argv[1] << '.' << std::endl;
+
      auto content = format::off::read(argv[1]);
      auto mesh = make_triangle_mesh<VertexP3>(content);
      auto graph = make_triangle_graph(mesh);
