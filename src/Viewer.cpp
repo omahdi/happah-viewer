@@ -74,6 +74,8 @@ void Viewer::execute(int argc, char* argv[]) {
      
      std::cout << "INFO: Making shaders." << std::endl;
 
+     load("/happah/illumination.h.glsl", std::experimental::filesystem::path("shaders/illumination.h.glsl"));
+
      auto ed_fr = make_edge_fragment_shader();
      auto ed_gm = make_geometry_shader("shaders/edge.g.glsl");
      auto ed_vx = make_edge_vertex_shader();
