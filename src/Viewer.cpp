@@ -7,8 +7,8 @@
 // 2017.07 - Hedwig Amberg    - add new shader for coloring triangles individualy.
 
 #include <happah/format.hpp>
-#include <happah/geometries/converters.hpp>
 #include <happah/geometries/LoopBoxSplineMesh.hpp>
+#include <happah/geometries/SurfaceSplineBEZ.hpp>
 #include <happah/geometries/TriangleArray.hpp>
 #include <happah/graphics.hpp>
 #include <happah/math/Space.hpp>
