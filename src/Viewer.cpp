@@ -5,6 +5,7 @@
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 // 2017.07 - Hedwig Amberg    - Added new shader for coloring triangles individually.
+// 2017.08 - Hedwig Ammber    - add new shader for coloring triangles and edges
 
 #include <happah/format.hpp>
 #include <happah/geometries/LoopBoxSplineMesh.hpp>
@@ -44,9 +45,9 @@ void Viewer::execute(int argc, char* argv[]) {
      auto content = format::off::read(argv[1]);
      auto mesh = make_triangle_mesh<VertexP3>(content);
      auto graph = make_triangle_graph(mesh);
-     auto edgeColors = std::vector<hpcolor>(3 * size(mesh), blue);
+     auto edgeColors = std::vector<hpcolor>(3 * size(mesh), green); //std::vector<hpcolor>(3 * size(mesh), blue);
      auto triangleColors = std::vector<hpcolor>(3 * size(mesh), blue);
-     auto vertexColors = std::vector<hpcolor>(3 * size(mesh), blue);
+     auto vertexColors = std::vector<hpcolor>(3 * size(mesh), red); //std::vector<hpcolor>(3 * size(mesh), blue);
      auto triangles = make_triangle_array(mesh);
      auto boxes = make_loop_box_spline_mesh(mesh);
      auto quartic = make_spline_surface(graph);
@@ -76,6 +77,8 @@ void Viewer::execute(int argc, char* argv[]) {
      std::cout << "INFO: Making shaders." << std::endl;
 
      load("/happah/illumination.h.glsl", p("shaders/illumination.h.glsl"));
+     load("/happah/paint.h.glsl", p("shaders/paint.h.glsl"));
+     load("/happah/geometry.h.glsl", p("shaders/geometry.h.glsl"));
 
      auto ed_fr = make_edge_fragment_shader();
      auto ed_gm = make_geometry_shader(p("shaders/edge.g.glsl"));
@@ -83,6 +86,9 @@ void Viewer::execute(int argc, char* argv[]) {
      auto hl_fr = make_highlight_lines_fragment_shader();
      auto lb_te = make_tessellation_evaluation_shader(p("shaders/loop-box-spline.te.glsl"));
      auto nm_gm = make_geometry_shader(p("shaders/normals.g.glsl"));
+     auto pt_vx = make_patches_vertex_shader();
+     auto pt_gm = make_geometry_shader(p("shaders/patches.g.glsl"));
+     auto pt_fr = make_patches_fragment_shader();
      auto qp_te = make_tessellation_evaluation_shader(p("shaders/quintic-patch.te.glsl"));
      auto si_fr = make_sphere_impostor_fragment_shader();
      auto si_gm = make_sphere_impostor_geometry_shader();
@@ -100,6 +106,9 @@ void Viewer::execute(int argc, char* argv[]) {
      compile(hl_fr);
      compile(lb_te);
      compile(nm_gm);
+     compile(pt_vx);
+     compile(pt_gm);
+     compile(pt_fr);
      compile(qp_te);
      compile(si_fr);
      compile(si_gm);
@@ -114,6 +123,7 @@ void Viewer::execute(int argc, char* argv[]) {
      std::cout << "INFO: Making programs." << std::endl;
 
      auto lmp = make_program("loop box spline mesh", sm_vx, lb_te, nm_gm, sm_fr);
+     auto ptc = make_program("colored patches mesh", pt_vx, pt_gm, pt_fr);
      auto qpp = make_program("quintic spline surface", sm_vx, qp_te, hl_fr);
      auto pcp = make_program("point cloud", sm_vx, si_gm, si_fr);
      auto tmp = make_program("triangle mesh", sm_vx, nm_gm, sm_fr);
@@ -262,6 +272,17 @@ void Viewer::execute(int argc, char* argv[]) {
           ed_fr.setLight(light);
           ed_fr.setModelColor(blue);
           render(edp, rc31, size(triangles));
+          
+          activate(ptc);
+          activate(bv3, va0, 0); //position
+          activate(bt3, va0, 1); //triangle color
+          activate(be3, va0, 2); //edge color
+          activate(bc3, va0, 3); //vertex color
+          pt_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(lengths.x + padding.x, lengths.y + padding.y, 0.0)));
+          pt_vx.setProjectionMatrix(projectionMatrix);
+          pt_fr.setEdgeWidth(edgeWidth);
+          pt_fr.setLight(light);
+          render(ptc, rc31, size(triangles));
           
           glfwSwapBuffers(context);
      }
