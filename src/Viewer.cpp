@@ -75,24 +75,24 @@ void Viewer::execute(int argc, char* argv[]) {
      
      std::cout << "INFO: Making shaders." << std::endl;
 
-     load("/happah/illumination.h.glsl", std::experimental::filesystem::path("shaders/illumination.h.glsl"));
+     load("/happah/illumination.h.glsl", p("shaders/illumination.h.glsl"));
 
      auto ed_fr = make_edge_fragment_shader();
-     auto ed_gm = make_geometry_shader(std::experimental::filesystem::path("shaders/edge.g.glsl"));
+     auto ed_gm = make_geometry_shader(p("shaders/edge.g.glsl"));
      auto ed_vx = make_edge_vertex_shader();
      auto hl_fr = make_highlight_lines_fragment_shader();
-     auto lb_te = make_tessellation_evaluation_shader(std::experimental::filesystem::path("shaders/loop-box-spline.te.glsl"));
-     auto nm_gm = make_geometry_shader(std::experimental::filesystem::path("shaders/normals.g.glsl"));
-     auto qp_te = make_tessellation_evaluation_shader(std::experimental::filesystem::path("shaders/quintic-patch.te.glsl"));
+     auto lb_te = make_tessellation_evaluation_shader(p("shaders/loop-box-spline.te.glsl"));
+     auto nm_gm = make_geometry_shader(p("shaders/normals.g.glsl"));
+     auto qp_te = make_tessellation_evaluation_shader(p("shaders/quintic-patch.te.glsl"));
      auto si_fr = make_sphere_impostor_fragment_shader();
      auto si_gm = make_sphere_impostor_geometry_shader();
      auto sm_fr = make_simple_fragment_shader();
      auto sm_vx = make_simple_vertex_shader();
      auto tr_fr = make_triangles_fragment_shader();
-     auto tr_gm = make_geometry_shader(std::experimental::filesystem::path("shaders/triangles.g.glsl"));
+     auto tr_gm = make_geometry_shader(p("shaders/triangles.g.glsl"));
      auto tr_vx = make_triangles_vertex_shader();
      auto wf_fr = make_wireframe_fragment_shader();
-     auto wf_gm = make_geometry_shader(std::experimental::filesystem::path("shaders/wireframe.g.glsl"));
+     auto wf_gm = make_geometry_shader(p("shaders/wireframe.g.glsl"));
 
      compile(ed_fr);
      compile(ed_gm);
