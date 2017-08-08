@@ -163,8 +163,8 @@ void Viewer::execute(int argc, char* argv[]) {
      auto box = make_axis_aligned_bounding_box(mesh);
      auto edgeWidth = 0.006; //0.02;//TODO: 0.1 * average height?
      auto lengths = std::get<1>(box) - std::get<0>(box);
-     auto level0 = std::array<hpreal, 2>({ 50, 50 });
-     auto level1 = std::array<hpreal, 4>({ 30, 30, 30, 30 });
+     auto level0 = std::array<float, 2>({ 50, 50 });
+     auto level1 = std::array<float, 4>({ 30, 30, 30, 30 });
      auto padding = hpreal(0.1) * lengths;
      auto radius = 0.05;
 
