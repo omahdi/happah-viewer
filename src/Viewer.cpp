@@ -8,9 +8,9 @@
 // 2017.08 - Hedwig Ammber    - add new shader for coloring triangles and edges
 
 #include <happah/format.hpp>
-#include <happah/geometries/LoopBoxSplineMesh.hpp>
-#include <happah/geometries/SurfaceSplineBEZ.hpp>
-#include <happah/geometries/TriangleArray.hpp>
+#include <happah/geometry/LoopBoxSplineMesh.hpp>
+#include <happah/geometry/BezierTriangleMesh.hpp>
+#include <happah/geometry/TriangleArray.hpp>
 #include <happah/graphics.hpp>
 #include <happah/math/Space.hpp>
 #include <GLFW/glfw3.h>//NOTE: Glad must be included before GLFW.
