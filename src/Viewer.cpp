@@ -5,7 +5,7 @@
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 // 2017.07 - Hedwig Amberg    - Added new shader for coloring triangles individually.
-// 2017.08 - Hedwig Ammber    - add new shader for coloring triangles and edges
+// 2017.08 - Hedwig Amberg    - Added new shader for coloring both triangles and edges.
 
 #include <happah/format.hpp>
 #include <happah/geometry/LoopBoxSplineMesh.hpp>
@@ -17,7 +17,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 #include <stdexcept>
-#include <experimental/filesystem>
 
 #include "Viewer.hpp"
 
