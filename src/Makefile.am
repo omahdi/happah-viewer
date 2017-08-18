@@ -6,8 +6,7 @@
 bin_PROGRAMS = happah
 happah_SOURCES = \
      main.cpp \
-     Viewer.cpp \
-     Window.cpp
+     Viewer.cpp
 happah_CPPFLAGS = -std=c++1y -I/usr/include/eigen3
 happah_LDFLAGS = -lGL -lglfw -lX11 -lXxf86vm -lXrandr -lpthread -lhappah -lhappah-graphics -lboost_iostreams -ldl -lstdc++fs
 
