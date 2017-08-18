@@ -24,9 +24,7 @@ public:
 private:
      Window m_window;
      
-     void movement(Viewport& viewport);
-
-};//class Viewer
+};//Viewer
 
 }//namespace happah
 

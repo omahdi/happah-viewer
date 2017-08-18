@@ -183,8 +183,6 @@ void Viewer::execute(int argc, char* argv[]) {
      glClearColor(1, 1, 1, 1);
      while(!glfwWindowShouldClose(context)) {
           
-          movement(viewport);
-          
           glfwPollEvents();
           glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
           glEnable(GL_DEPTH_TEST);
@@ -284,27 +282,6 @@ void Viewer::execute(int argc, char* argv[]) {
           render(ptc, rc31, size(triangles));
           
           glfwSwapBuffers(context);
-     }
-}
-     
-void Viewer::movement(Viewport& viewport){
-     float speed = 0.1;
-     auto window = m_window.getContext();
-     if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS){
-          const Vector2D& step = Vector2D(0, speed);
-          viewport.translate(step);
-     }
-     if(glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS){
-          const Vector2D& step = Vector2D(0, - speed);
-          viewport.translate(step);
-     }
-     if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS){
-          const Vector2D& step = Vector2D(speed, 0);
-          viewport.translate(step);
-     }
-     if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS){
-          const Vector2D& step = Vector2D(- speed, 0);
-          viewport.translate(step);
      }
 }
      

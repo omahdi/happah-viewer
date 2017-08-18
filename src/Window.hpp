@@ -26,7 +26,7 @@ inline void onCursorPosEvent(GLFWwindow* handle, double x, double y);
 
 inline void onFramebufferSizeEvent(GLFWwindow* handle, int width, int height);
      
-inline void onKeyEvent(GLFWwindow* handle, int key, int scancode, int action, int mods);
+inline void onKeyEvent(GLFWwindow* handle, int key, int code, int action, int mods);
 
 inline void onMouseButtonEvent(GLFWwindow* handle, int button, int action, int mods);
      
@@ -65,12 +65,13 @@ private:
           return s_windows;
      }
 
+     bool m_ctrlPressed = false;
      GLFWwindow* m_handle;
+     hpreal m_delta = hpreal(0.1);
      Viewport m_viewport;
      double m_x;//mouse coordinates
      double m_y;
      
-     bool ctrlPressed = false;
 
      void onCursorPosEvent(double x, double y) {
           y = m_viewport.getHeight() - y;
@@ -83,10 +84,25 @@ private:
 
      void onFramebufferSizeEvent(hpuint width, hpuint height) { glViewport(0, 0, width, height); }
      
-     void onKeyEvent(int key, int scancode, int action, int mods) {
-          if( (key == GLFW_KEY_LEFT_CONTROL) || (key == GLFW_KEY_RIGHT_CONTROL) ){
-               ctrlPressed = (action != GLFW_RELEASE);
-          }
+     void onKeyEvent(int key, int code, int action, int mods) {
+          switch(key) {
+          case GLFW_KEY_LEFT_CONTROL:
+          case GLFW_KEY_RIGHT_CONTROL:
+               m_ctrlPressed = (action != GLFW_RELEASE);
+               break;
+          case GLFW_KEY_UP:
+               if(action == GLFW_PRESS || action == GLFW_REPEAT) m_viewport.translate(Vector2D(0, m_delta));
+               break;
+          case GLFW_KEY_DOWN:
+               if(action == GLFW_PRESS || action == GLFW_REPEAT) m_viewport.translate(Vector2D(0, -m_delta));
+               break;
+          case GLFW_KEY_LEFT:
+               if(action == GLFW_PRESS || action == GLFW_REPEAT) m_viewport.translate(Vector2D(m_delta, 0));
+               break;
+          case GLFW_KEY_RIGHT:
+               if(action == GLFW_PRESS || action == GLFW_REPEAT) m_viewport.translate(Vector2D(-m_delta, 0));
+               break;
+          };
      }
 
      void onMouseButtonEvent(hpint button, hpint action, hpint mods) {
@@ -97,7 +113,7 @@ private:
      }
      
      void onScrollEvent(double xoffset, double yoffset) {
-          if(ctrlPressed) m_viewport.zoom(yoffset * 0.01);
+          if(m_ctrlPressed) m_viewport.zoom(yoffset * 0.01);
           else {
                float delta = yoffset * 0.1;
                Point3D viewDir = m_viewport.getViewDirection();
@@ -112,7 +128,7 @@ private:
 
      friend void onFramebufferSizeEvent(GLFWwindow* handle, int width, int height);
      
-     friend void onKeyEvent(GLFWwindow* handle, int key, int scancode, int action, int mods);
+     friend void onKeyEvent(GLFWwindow* handle, int key, int code, int action, int mods);
 
      friend void onMouseButtonEvent(GLFWwindow* handle, int button, int action, int mods);
      
@@ -126,7 +142,7 @@ inline void onCursorPosEvent(GLFWwindow* handle, double x, double y) { Window::c
 
 inline void onFramebufferSizeEvent(GLFWwindow* handle, int width, int height) { Window::cache()[handle]->onFramebufferSizeEvent(width, height); }
      
-inline void onKeyEvent(GLFWwindow* handle, int key, int scancode, int action, int mods){ Window::cache()[handle]->onKeyEvent(key, scancode, action, mods); }
+inline void onKeyEvent(GLFWwindow* handle, int key, int code, int action, int mods){ Window::cache()[handle]->onKeyEvent(key, code, action, mods); }
 
 inline void onMouseButtonEvent(GLFWwindow* handle, int button, int action, int mods) { Window::cache()[handle]->onMouseButtonEvent(button, action, mods); }
      
