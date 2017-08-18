@@ -67,12 +67,11 @@ void Window::onMouseButtonEvent(hpint button, hpint action, hpint mods) {
 }
 
 void Window::onScrollEvent(double xoffset, double yoffset) {
-     if(m_ctrlPressed) m_viewport.zoom(yoffset * 0.01);
+     if(m_ctrlPressed) m_viewport.zoom(yoffset * m_delta * 0.1);
      else {
-          float delta = yoffset * 0.1;
-          Point3D viewDir = m_viewport.getViewDirection();
-          const Vector3D& step = Vector3D(delta * viewDir.x, delta * viewDir.y, delta * viewDir.z);
-          m_viewport.translate(step);
+          auto delta = hpreal(yoffset) * m_delta;
+          auto direction = glm::normalize(make_view_direction(m_viewport));
+          m_viewport.translate(delta * direction);
      }
 }
 

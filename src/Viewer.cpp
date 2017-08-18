@@ -188,7 +188,7 @@ void Viewer::execute(int argc, char* argv[]) {
           glEnable(GL_DEPTH_TEST);
 
           auto& projectionMatrix = viewport.getProjectionMatrix();
-          auto& viewMatrix = viewport.getViewMatrix();
+          auto viewMatrix = make_view_matrix(viewport);
           auto light = glm::normalize(Point3D(viewMatrix[0]));
           auto tempDirection = viewMatrix * Vector4D(beamDirection, 0.0);
           auto tempOrigin = viewMatrix * Point4D(beamOrigin, 1.0);
