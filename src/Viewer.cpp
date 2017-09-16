@@ -11,10 +11,12 @@
 #include <happah/geometry/LoopBoxSplineMesh.hpp>
 #include <happah/geometry/BezierTriangleMesh.hpp>
 #include <happah/geometry/TriangleArray.hpp>
+#include <happah/geometry/DiskEmbedding.hpp>
 #include <happah/graphics.hpp>
 #include <happah/math/Space.hpp>
 #include <GLFW/glfw3.h>//NOTE: Glad must be included before GLFW.
 #include <glm/gtc/matrix_transform.hpp>
+#include <algorithm>
 #include <iostream>
 #include <stdexcept>
 
@@ -38,13 +40,16 @@ void Viewer::execute(int argc, char* argv[]) {
      auto blue = hpcolor(0.0, 0.0, 1.0, 1.0);
      auto green = hpcolor(0.0, 1.0, 0.0, 1.0);
      auto red = hpcolor(1.0, 0.0, 0.0, 1.0);
-     
+     const auto regular_edge_color = hpcolor(0.5, 0.5, 0.5, 0.0);
+     const auto cut_edge_color = hpcolor(1.0, 0.0, 4.0, 1.0);
+     const auto new_edge_color = hpcolor(2.0, 1.0, 0.7, 1.0);
+
      std::cout << "INFO: Importing " << argv[1] << '.' << std::endl;
 
      auto content = format::off::read(argv[1]);
      auto mesh = make_triangle_mesh<VertexP3>(content);
      auto graph = make_triangle_graph(mesh);
-     auto edgeColors = std::vector<hpcolor>(3 * size(mesh), green); //std::vector<hpcolor>(3 * size(mesh), blue);
+     auto edgeColors = std::vector<hpcolor>(3 * size(mesh), regular_edge_color); //std::vector<hpcolor>(3 * size(mesh), blue);
      auto triangleColors = std::vector<hpcolor>(3 * size(mesh), blue);
      auto vertexColors = std::vector<hpcolor>(3 * size(mesh), red); //std::vector<hpcolor>(3 * size(mesh), blue);
      auto triangles = make_triangle_array(mesh);
@@ -53,26 +58,52 @@ void Viewer::execute(int argc, char* argv[]) {
      //auto mesh = make_triangle_mesh(quartic, 4);
      auto quintic = elevate(quartic);
 
-     for(auto e : trim(graph, cut(graph))){
-          edgeColors[e] = red;
+     // Don't name it ``cut'' or ``cut_edges'' to avoid shadowing functions of
+     // that name: cut() is defined in "TriangleGraph.hpp", cut_edges() in
+     // "DiskEmbedding.hpp".
+     const auto the_cut = trim(graph, cut(graph));
+     for(auto e : the_cut){
+          edgeColors[e] = cut_edge_color;
           visit_spokes(make_spokes_enumerator(graph.getEdges(), e), [&](auto e) {
                static constexpr hpuint o[3] = { 1, 2, 0 };
-               
+
                auto f = graph.getEdge(e).opposite;
                auto t = make_triangle_index(f);
                auto i = make_edge_offset(f);
-               vertexColors[3 * t + o[i]] = red;
-               vertexColors[e] = red;
+               vertexColors[3 * t + o[i]] = cut_edge_color;
+               vertexColors[e] = cut_edge_color;
           });
      }
-     
+     auto cut_graph {cut_graph_from_edges(graph, the_cut)};
+     remove_chords(cut_graph, graph);
+     {
+          using std::begin;
+          using std::end;
+          auto sorted_cut = the_cut;
+          std::sort(begin(sorted_cut), end(sorted_cut));
+          auto reduced_cut = cut_edges(cut_graph);
+          std::sort(begin(reduced_cut), end(reduced_cut));
+          std::vector<hpindex> sym_diff;
+          sym_diff.reserve((sorted_cut.size()-reduced_cut.size())*2);
+          std::set_symmetric_difference(
+               begin(sorted_cut), end(sorted_cut),
+               begin(reduced_cut), end(reduced_cut),
+               std::back_inserter(sym_diff));
+          for (auto ei : sym_diff) {
+               if (std::binary_search(begin(reduced_cut), end(reduced_cut), ei))
+                    edgeColors[ei] = new_edge_color;
+               else
+                    edgeColors[ei].a = 0.0;       // remove highlight flag
+          }
+     }
+
      //TODO: only for testing !!!
      for(int i = 0; i < size(triangleColors); i += 3){
           triangleColors[i] = red;
           triangleColors[i+1] = blue;
           triangleColors[i+2] = green;
      }
-     
+
      std::cout << "INFO: Making shaders." << std::endl;
 
      load("/happah/illumination.h.glsl", p("shaders/illumination.h.glsl"));
@@ -170,7 +201,7 @@ void Viewer::execute(int argc, char* argv[]) {
      auto beamDirection = Vector3D(0.0, 0.0, 1.0);
      auto beamOrigin = Point3D(10.0, 0.0, 0.0);
      auto box = make_axis_aligned_bounding_box(mesh);
-     auto edgeWidth = 0.006; //0.02;//TODO: 0.1 * average height?
+     auto edgeWidth = 0.01; //0.02;//TODO: 0.1 * average height?
      auto lengths = std::get<1>(box) - std::get<0>(box);
      auto level0 = std::array<float, 2>({ 50, 50 });
      auto level1 = std::array<float, 4>({ 30, 30, 30, 30 });
@@ -182,19 +213,20 @@ void Viewer::execute(int argc, char* argv[]) {
      look_at(viewport, mesh.getVertices());
      glClearColor(1, 1, 1, 1);
      while(!glfwWindowShouldClose(context)) {
-          
+
           glfwPollEvents();
           glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
           glEnable(GL_DEPTH_TEST);
 
           auto projectionMatrix = make_projection_matrix(viewport);
           auto viewMatrix = make_view_matrix(viewport);
-          auto light = glm::normalize(Point3D(viewMatrix[0]));
+          auto light = 0.6f*glm::normalize(Point3D(viewMatrix[0]));
           auto tempDirection = viewMatrix * Vector4D(beamDirection, 0.0);
           auto tempOrigin = viewMatrix * Point4D(beamOrigin, 1.0);
 
           activate(va0);
-          
+
+#if 0
           activate(qpp, PatchType::QUINTIC);
           activate(bv1, va0, 0);
           sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(lengths.x + padding.x, 0.0, 0.0)));
@@ -207,20 +239,26 @@ void Viewer::execute(int argc, char* argv[]) {
           hl_fr.setBeam(Point3D(tempOrigin) / tempOrigin.w, glm::normalize(Vector3D(tempDirection)));
           hl_fr.setLight(light);
           render(qpp, rc1);
-          
+#endif
+
           activate(tmp);
+#if 0
           activate(bv0, va0, 0);
           sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-lengths.x - padding.x, 0.0, 0.0)));
           sm_vx.setProjectionMatrix(projectionMatrix);
           sm_fr.setLight(light);
           sm_fr.setModelColor(blue);
           render(tmp, rc0);
+#endif
 
+#if 0
           activate(bv3, va0, 0);
           sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-lengths.x - padding.x, -lengths.y - padding.y, 0.0)));
           sm_fr.setModelColor(red);
           render(tmp, rc30, size(triangles));
+#endif
 
+#if 0
           activate(lmp, PatchType::LOOP_BOX_SPLINE);
           activate(bv2, va0, 0);
           sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(0.0, -lengths.y - padding.y, 0.0)));
@@ -228,7 +266,9 @@ void Viewer::execute(int argc, char* argv[]) {
           sm_fr.setLight(light);
           sm_fr.setModelColor(blue);
           render(lmp, rc2);
+#endif
 
+#if 0
           activate(pcp);
           activate(bv0, va0, 0);
           sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(lengths.x + padding.x, -lengths.y - padding.y, 0.0)));
@@ -240,7 +280,9 @@ void Viewer::execute(int argc, char* argv[]) {
           si_fr.setProjectionMatrix(projectionMatrix);
           si_fr.setRadius(radius);
           render(pcp, rc4, mesh.getNumberOfVertices());
-          
+#endif
+
+#if 0
           activate(wfp);
           activate(bv0, va0, 0);
           sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-lengths.x - padding.x, lengths.y + padding.y, 0.0)));
@@ -250,7 +292,10 @@ void Viewer::execute(int argc, char* argv[]) {
           wf_fr.setLight(light);
           wf_fr.setModelColor(blue);
           render(wfp, rc0);
-          
+#endif
+
+
+#if 0
           activate(trp);
           activate(bv3, va0, 0);
           activate(bt3, va0, 1);
@@ -258,7 +303,9 @@ void Viewer::execute(int argc, char* argv[]) {
           tr_vx.setProjectionMatrix(projectionMatrix);
           tr_fr.setLight(light);
           render(trp, rc31, size(triangles));
-          
+#endif
+
+#if 1
           activate(edp);
           activate(bv3, va0, 0);
           activate(bc3, va0, 1);
@@ -269,7 +316,9 @@ void Viewer::execute(int argc, char* argv[]) {
           ed_fr.setLight(light);
           ed_fr.setModelColor(blue);
           render(edp, rc31, size(triangles));
-          
+#endif
+
+#if 0
           activate(ptc);
           activate(bv3, va0, 0); //position
           activate(bt3, va0, 1); //triangle color
@@ -280,10 +329,11 @@ void Viewer::execute(int argc, char* argv[]) {
           pt_fr.setEdgeWidth(edgeWidth);
           pt_fr.setLight(light);
           render(ptc, rc31, size(triangles));
-          
+#endif
+
           glfwSwapBuffers(context);
      }
 }
-     
+
 }//namespace happah
 
