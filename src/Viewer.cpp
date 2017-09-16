@@ -201,7 +201,7 @@ void Viewer::execute(int argc, char* argv[]) {
      auto beamDirection = Vector3D(0.0, 0.0, 1.0);
      auto beamOrigin = Point3D(10.0, 0.0, 0.0);
      auto box = make_axis_aligned_bounding_box(mesh);
-     auto edgeWidth = 0.01; //0.02;//TODO: 0.1 * average height?
+     auto edgeWidth = 0.005; //0.02;//TODO: 0.1 * average height?
      auto lengths = std::get<1>(box) - std::get<0>(box);
      auto level0 = std::array<float, 2>({ 50, 50 });
      auto level1 = std::array<float, 4>({ 30, 30, 30, 30 });
