@@ -8,6 +8,8 @@ happah_SOURCES = \
      main.cpp \
      Viewer.cpp \
      Window.cpp
-happah_CPPFLAGS = -std=c++1y -I/usr/include/eigen3
-happah_LDFLAGS = -lGL -lglfw -lX11 -lXxf86vm -lXrandr -lpthread -lhappah -lhappah-graphics -lboost_iostreams -ldl -lstdc++fs
-
+AM_CFLAGS = -g -O2
+happah_CPPFLAGS = $(eigen3_CFLAGS) $(BOOST_CPPFLAGS)
+happah_CXXFLAGS = -std=c++1z
+happah_LDFLAGS = $(eigen3_LDFLAGS) $(BOOST_LDFLAGS)
+happah_LDADD = -lhappah -lhappah-graphics -lboost_iostreams -lglfw -lpthread -ldl -lstdc++fs
