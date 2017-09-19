@@ -36,6 +36,13 @@ void Window::onCursorPosEvent(double x, double y) {
           m_x = x;
           m_y = y;
      }
+// Note: Test m_mousezoom to ensure m_mousezoom_eye is set up properly in case
+// this handler is served before onMouseButtonEvent().
+     else if(m_mousezoom && glfwGetMouseButton(m_handle, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) {
+          double dist = glm::length(glm::dvec2(x-m_mousezoom_x, y-m_mousezoom_y));
+          m_viewport.setEye(m_mousezoom_eye_center, m_mousezoom_eye_position, m_mousezoom_eye_up);
+          m_viewport.zoom(dist * m_mousezoom_sensitivity);
+     }
 }
 
 void Window::onKeyEvent(int key, int code, int action, int mods) {
@@ -60,9 +67,22 @@ void Window::onKeyEvent(int key, int code, int action, int mods) {
 }
 
 void Window::onMouseButtonEvent(hpint button, hpint action, hpint mods) {
+     const auto record_cursor_pos = [this] (auto& x, auto& y) {
+          glfwGetCursorPos(this->m_handle, &x, &y);
+          y = this->m_viewport.getHeight() - y;
+     };
      if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-          glfwGetCursorPos(m_handle, &m_x, &m_y);
-          m_y = m_viewport.getHeight() - m_y;
+          record_cursor_pos(m_x, m_y);
+     } else if(button == GLFW_MOUSE_BUTTON_RIGHT) {
+          record_cursor_pos(m_x, m_y);
+          if (action == GLFW_PRESS && !m_mousezoom) {
+               record_cursor_pos(m_mousezoom_x, m_mousezoom_y);
+               m_mousezoom_eye_position = m_viewport.getCenter();
+               m_mousezoom_eye_center = m_viewport.getEyePosition();
+               m_mousezoom_eye_up = m_viewport.getUp();
+               m_mousezoom = true;
+          } else if (action == GLFW_RELEASE)
+               m_mousezoom = false;
      }
 }
 
