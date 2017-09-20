@@ -60,7 +60,7 @@ private:
      bool m_mousezoom {false};
      Point3D m_mousezoom_eye_center, m_mousezoom_eye_position;
      Vector3D m_mousezoom_eye_up;
-     double m_mousezoom_sensitivity {0.1};
+     double m_mousezoom_sensitivity {0.01};
      double m_mousezoom_x, m_mousezoom_y;
      
      void onCursorPosEvent(double x, double y);
