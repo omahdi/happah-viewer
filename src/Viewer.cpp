@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <iostream>
 #include <stdexcept>
+#include <queue>
 
 #include "Viewer.hpp"
 
@@ -33,16 +34,70 @@ Viewer::Viewer(hpuint width, hpuint height, const std::string& title)
      if(!gladLoadGL()) throw std::runtime_error("Failed to initialize Glad.");
 }
 
+template<class RandomDev>
+Indices geocut(const std::vector<Edge>& edges) {
+     struct edge_info {
+          hpindex ei, dist;
+          // Note: invert meaning to turn max-heap into min-heap
+          bool operator<(const edge_info& other) const { return dist > other.dist; }
+     };
+     auto cache = boost::dynamic_bitset<>(edges.size(), false);
+     auto std::priority_queue<edge_info> pq;
+     for (hpindex ei = 0; ei <= 2; ei++) {
+          pq.push(edge_info{ei, 0});
+          cache[ei] = true;
+     }
+     return cut(edges, 0, [&](auto& neighbors) {
+          //for(auto e : boost::irange(0u, hpindex(mesh.getEdges().size())))
+          //     if(neighbors[e << 1] != std::numeric_limits<hpindex>::max() && neighbors[mesh.getEdge(e).opposite << 1] == std::numeric_limits<hpindex>::max()) return e;
+          edge_info info;
+          hpindex e;
+          while (!pq.empty()) {
+               info = pq.top();
+               e = info.ei;
+               if (cache[e])
+                    break;
+               pq.pop();
+          }
+          if (pq.empty())
+               return std::numeric_limits<hpindex>::max();
+          pq.pop();
+          auto& edge = edges[edges[e].opposite];
+          auto e0 = edges[edge.previous].opposite;
+          auto e1 = edges[edge.next].opposite;
+          auto b0 = neighbors[e0 << 1] == std::numeric_limits<hpindex>::max();
+          auto b1 = neighbors[e1 << 1] == std::numeric_limits<hpindex>::max();
+          if (b0) {
+               pq.push(edge_info{edge.previous, info.dist+1});
+               cache[edge.previous] = true;
+          } else
+               cache[e0] = false;
+          if (b1) {
+               pq.push(edge_info{edge.next, info.dist+1});
+               cache[edge.next] = true;
+          } else
+               cache[e1] = false;
+          cache[e] = false;
+          return hpindex(e);
+     });
+}
+
 void Viewer::execute(int argc, char* argv[]) {
      auto context = m_window.getContext();
      auto& viewport = m_window.getViewport();
 
-     auto blue = hpcolor(0.0, 0.0, 1.0, 1.0);
-     auto green = hpcolor(0.0, 1.0, 0.0, 1.0);
-     auto red = hpcolor(1.0, 0.0, 0.0, 1.0);
-     const auto regular_edge_color = hpcolor(0.5, 0.5, 0.5, 0.0);
-     const auto cut_edge_color = hpcolor(1.0, 0.0, 4.0, 1.0);
-     const auto new_edge_color = hpcolor(2.0, 1.0, 0.7, 1.0);
+     const auto blue = hpcolor(0.0, 0.0, 1.0, 1.0);
+     const auto green = hpcolor(0.0, 1.0, 0.0, 1.0);
+     const auto red = hpcolor(1.0, 0.0, 0.0, 1.0);
+     const auto white = hpcolor(1.0, 1.0, 1.0, 1.0);
+     const auto grey05 = hpcolor(0.05, 0.05, 0.05, 1.0);
+     const auto grey25 = hpcolor(0.25, 0.25, 0.25, 1.0);
+     const auto grey50 = hpcolor(0.50, 0.50, 0.50, 1.0);
+     const auto grey75 = hpcolor(0.75, 0.75, 0.75, 1.0);
+     const auto regular_edge_color = grey25;
+     const auto cut_edge_color = hpcolor(1.0, 0.0, 1.0, 1.0);
+     const auto new_edge_color = hpcolor(0.0, 0.9, 0.4, 1.0);
+     const auto old_edge_color = hpcolor(0.5, 0.0, 0.8, 1.0);
 
      std::cout << "INFO: Importing " << argv[1] << '.' << std::endl;
 
@@ -64,6 +119,7 @@ void Viewer::execute(int argc, char* argv[]) {
      const auto the_cut = trim(graph, cut(graph));
      for(auto e : the_cut){
           edgeColors[e] = cut_edge_color;
+          edgeColors[graph.getEdge(e).opposite] = cut_edge_color;
           visit_spokes(make_spokes_enumerator(graph.getEdges(), e), [&](auto e) {
                static constexpr hpuint o[3] = { 1, 2, 0 };
 
@@ -90,10 +146,10 @@ void Viewer::execute(int argc, char* argv[]) {
                begin(reduced_cut), end(reduced_cut),
                std::back_inserter(sym_diff));
           for (auto ei : sym_diff) {
-               if (std::binary_search(begin(reduced_cut), end(reduced_cut), ei))
-                    edgeColors[ei] = new_edge_color;
-               else
-                    edgeColors[ei].a = 0.0;       // remove highlight flag
+               const auto is_new = std::binary_search(begin(reduced_cut), end(reduced_cut), ei);
+               const auto opp = graph.getEdge(ei).opposite;
+               edgeColors[ei] = is_new ? new_edge_color : old_edge_color;
+               edgeColors[opp] = is_new ? new_edge_color : old_edge_color;
           }
      }
 
@@ -212,11 +268,13 @@ void Viewer::execute(int argc, char* argv[]) {
 
      look_at(viewport, mesh.getVertices());
      glClearColor(1, 1, 1, 1);
+     //glEnable(GL_BLEND);
+     //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+     glEnable(GL_DEPTH_TEST);
      while(!glfwWindowShouldClose(context)) {
 
           glfwPollEvents();
           glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-          glEnable(GL_DEPTH_TEST);
 
           auto projectionMatrix = make_projection_matrix(viewport);
           auto viewMatrix = make_view_matrix(viewport);
@@ -314,7 +372,7 @@ void Viewer::execute(int argc, char* argv[]) {
           ed_vx.setProjectionMatrix(projectionMatrix);
           ed_fr.setEdgeWidth(edgeWidth);
           ed_fr.setLight(light);
-          ed_fr.setModelColor(blue);
+          ed_fr.setModelColor(grey05); //white);
           render(edp, rc31, size(triangles));
 #endif
 
