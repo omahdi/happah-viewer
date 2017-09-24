@@ -36,8 +36,9 @@ Viewer::Viewer(hpuint width, hpuint height, const std::string& title)
      if(!gladLoadGL()) throw std::runtime_error("Failed to initialize Glad.");
 }
 
-template<class RandomDev>
-Indices geocut(const std::vector<Edge>& edges) {
+/// Variant of cut() that picks next edge by hop distance.
+/// Note: not fit for meshes with border!
+Indices geocut(const std::vector<Edge>& edges, hpindex t0 = 0) {
      struct edge_info {
           hpindex ei, dist;
           // Note: invert meaning to turn max-heap into min-heap
@@ -45,11 +46,62 @@ Indices geocut(const std::vector<Edge>& edges) {
      };
      auto cache = boost::dynamic_bitset<>(edges.size(), false);
      std::priority_queue<edge_info> pq;
+     assert(t0 < edges.size() / 3);
      for (hpindex ei = 0; ei <= 2; ei++) {
           pq.push(edge_info{ei, 0});
           cache[ei] = true;
      }
      return cut(edges, 0, [&](auto& neighbors) {
+          //for(auto e : boost::irange(0u, hpindex(mesh.getEdges().size())))
+          //     if(neighbors[e << 1] != std::numeric_limits<hpindex>::max() && neighbors[mesh.getEdge(e).opposite << 1] == std::numeric_limits<hpindex>::max()) return e;
+          edge_info info;
+          hpindex e;
+          while (!pq.empty()) {
+               info = pq.top();
+               e = info.ei;
+               if (cache[e])
+                    break;
+               pq.pop();
+          }
+          if (pq.empty())
+               return std::numeric_limits<hpindex>::max();
+          pq.pop();
+          auto& edge = edges[edges[e].opposite];
+          auto e0 = edges[edge.previous].opposite;
+          auto e1 = edges[edge.next].opposite;
+          auto b0 = neighbors[e0 << 1] == std::numeric_limits<hpindex>::max();
+          auto b1 = neighbors[e1 << 1] == std::numeric_limits<hpindex>::max();
+          if (b0) {
+               pq.push(edge_info{edge.previous, info.dist+1});
+               cache[edge.previous] = true;
+          } else
+               cache[e0] = false;
+          if (b1) {
+               pq.push(edge_info{edge.next, info.dist+1});
+               cache[edge.next] = true;
+          } else
+               cache[e1] = false;
+          cache[e] = false;
+          return hpindex(e);
+     });
+}
+
+/// Variant of cut() that picks next edge by hop distance.
+/// Note: not fit for meshes with border!
+Indices hopdist_cut(const std::vector<Edge>& edges, hpindex t0 = 0) {
+     struct edge_info {
+          hpindex ei, dist;
+          // Note: invert meaning to turn max-heap into min-heap
+          bool operator<(const edge_info& other) const { return dist > other.dist; }
+     };
+     auto cache = boost::dynamic_bitset<>(edges.size(), false);
+     std::priority_queue<edge_info> pq;
+     assert(t0 < edges.size() / 3);
+     for (hpindex ei = 3*t0, last_ei = 3*t0+2; ei <= last_ei; ei++) {
+          pq.push(edge_info{ei, 0});
+          cache[ei] = true;
+     }
+     return cut(edges, t0, [&](auto& neighbors) {
           //for(auto e : boost::irange(0u, hpindex(mesh.getEdges().size())))
           //     if(neighbors[e << 1] != std::numeric_limits<hpindex>::max() && neighbors[mesh.getEdge(e).opposite << 1] == std::numeric_limits<hpindex>::max()) return e;
           edge_info info;
@@ -101,6 +153,10 @@ void Viewer::execute(int argc, char* argv[]) {
      const auto new_edge_color = hpcolor(0.0, 0.9, 0.4, 1.0);
      const auto old_edge_color = hpcolor(0.5, 0.0, 0.8, 1.0);
 
+     if (argc <= 1) {
+          std::cout << "Usage: " << argv[0] << " <mesh.off> [initial-cut.hph]\n";
+          return;
+     }
      std::cout << "INFO: Importing " << argv[1] << '.' << std::endl;
 
      auto content = format::off::read(argv[1]);
@@ -114,10 +170,14 @@ void Viewer::execute(int argc, char* argv[]) {
      // Don't name it ``cut'' or ``cut_edges'' to avoid shadowing functions of
      // that name: cut() is defined in "TriangleGraph.hpp", cut_edges() in
      // "DiskEmbedding.hpp".
-#if 1
+#if 0
      const auto the_cut = trim(graph, cut(graph));
 #else
-     const auto the_cut = trim(graph, geocut(graph.getEdges()));
+     Indices the_cut;
+     if (argc >= 3)
+          the_cut = format::hph::read<Indices>(p(argv[2]));
+     else
+          the_cut = trim(graph, hopdist_cut(graph.getEdges()));
 #endif
      for(auto e : the_cut){
           edgeColors[e] = cut_edge_color;
@@ -132,27 +192,31 @@ void Viewer::execute(int argc, char* argv[]) {
                vertexColors[e] = cut_edge_color;
           });
      }
-     auto cut_graph {cut_graph_from_edges(graph, the_cut)};
-     remove_chords(cut_graph, graph);
-     {
-          using std::begin;
-          using std::end;
-          auto sorted_cut = the_cut;
-          std::sort(begin(sorted_cut), end(sorted_cut));
-          auto reduced_cut = cut_edges(cut_graph);
-          std::sort(begin(reduced_cut), end(reduced_cut));
-          std::vector<hpindex> sym_diff;
-          sym_diff.reserve((sorted_cut.size()-reduced_cut.size())*2);
-          std::set_symmetric_difference(
-               begin(sorted_cut), end(sorted_cut),
-               begin(reduced_cut), end(reduced_cut),
-               std::back_inserter(sym_diff));
-          for (auto ei : sym_diff) {
-               const auto is_new = std::binary_search(begin(reduced_cut), end(reduced_cut), ei);
-               const auto opp = graph.getEdge(ei).opposite;
-               edgeColors[ei] = is_new ? new_edge_color : old_edge_color;
-               edgeColors[opp] = is_new ? new_edge_color : old_edge_color;
+     try {
+          auto cut_graph {cut_graph_from_edges(graph, the_cut)};
+          remove_chords(cut_graph, graph);
+          {
+               using std::begin;
+               using std::end;
+               auto sorted_cut = the_cut;
+               std::sort(begin(sorted_cut), end(sorted_cut));
+               auto reduced_cut = cut_edges(cut_graph);
+               std::sort(begin(reduced_cut), end(reduced_cut));
+               std::vector<hpindex> sym_diff;
+               sym_diff.reserve((sorted_cut.size()-reduced_cut.size())*2);
+               std::set_symmetric_difference(
+                    begin(sorted_cut), end(sorted_cut),
+                    begin(reduced_cut), end(reduced_cut),
+                    std::back_inserter(sym_diff));
+               for (auto ei : sym_diff) {
+                    const auto is_new = std::binary_search(begin(reduced_cut), end(reduced_cut), ei);
+                    const auto opp = graph.getEdge(ei).opposite;
+                    edgeColors[ei] = is_new ? new_edge_color : old_edge_color;
+                    edgeColors[opp] = is_new ? new_edge_color : old_edge_color;
+               }
           }
+     } catch (const std::exception& ecp) {
+          std::cout << "WARN: Exception while building cut graph: " << ecp.what() << "\n";
      }
 
      //TODO: only for testing !!!
@@ -223,6 +287,7 @@ void Viewer::execute(int argc, char* argv[]) {
      glClearColor(1, 1, 1, 1);
      //glEnable(GL_BLEND);
      //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+     //glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
      glEnable(GL_DEPTH_TEST);
      while(!glfwWindowShouldClose(context)) {
           glfwPollEvents();
@@ -252,11 +317,12 @@ void Viewer::execute(int argc, char* argv[]) {
           activate(be3, va0, 1);
           ed_vx.setModelViewMatrix(viewMatrix);
           ed_vx.setProjectionMatrix(projectionMatrix);
+          //ed_fr.setEdgeWidth(3.0);
           ed_fr.setEdgeWidth(3.0);
           ed_fr.setLight(light);
-          ed_fr.setModelColor(grey05); //white);
-          ed_fr.setSqueezeScale(0.55);
-          ed_fr.setSqueezeMin(0.1);
+          ed_fr.setModelColor(hpcolor(0.5, 0.5, 0.5, 1.0)); //white);
+          ed_fr.setSqueezeScale(0.75);
+          ed_fr.setSqueezeMin(0.5);
           render(edp, rc31, size(triangles));
 #endif
 

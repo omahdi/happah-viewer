@@ -32,16 +32,26 @@ Window::~Window() {
 void Window::onCursorPosEvent(double x, double y) {
      y = m_viewport.getHeight() - y;
      if(glfwGetMouseButton(m_handle, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-          m_viewport.rotate(m_x, m_y, x, y);
+          if (!m_ctrlPressed)
+               m_viewport.rotate(m_x, m_y, x, y);
+          else
+               m_viewport.translate(Vector2D(x - m_x, y - m_y)*hpreal(m_mousetrans_sensitivity));
           m_x = x;
           m_y = y;
+     }
+     else if(!m_mousezoom && glfwGetMouseButton(m_handle, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) {
+          double dist = y-m_mousezoom_y;
+          m_viewport.setEye(m_mousezoom_eye_center, m_mousezoom_eye_position, m_mousezoom_eye_up);
+          m_viewport.translate(Vector3D(0.0, 0.0, dist * m_mousezoom_sensitivity));
+          //std::cout << "cursorPosEvent: zoom: dist=" << dist << ", sensitivity=" << m_mousezoom_sensitivity << "\n";
      }
 // Note: Test m_mousezoom to ensure m_mousezoom_eye is set up properly in case
 // this handler is served before onMouseButtonEvent().
      else if(m_mousezoom && glfwGetMouseButton(m_handle, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) {
           double dist = y-m_mousezoom_y;
           m_viewport.setEye(m_mousezoom_eye_center, m_mousezoom_eye_position, m_mousezoom_eye_up);
-          m_viewport.zoom(dist * m_mousezoom_sensitivity);
+          m_viewport.zoom(std::min(dist * m_mousezoom_sensitivity, 0.99));
+          //std::cout << "cursorPosEvent: zoom: dist=" << dist << ", sensitivity=" << m_mousezoom_sensitivity << "\n";
      }
 }
 

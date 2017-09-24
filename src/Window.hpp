@@ -57,6 +57,7 @@ private:
      Viewport m_viewport;
      double m_x;//mouse coordinates
      double m_y;
+     double m_mousetrans_sensitivity {0.01};
      bool m_mousezoom {false};
      Point3D m_mousezoom_eye_center, m_mousezoom_eye_position;
      Vector3D m_mousezoom_eye_up;
