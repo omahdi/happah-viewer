@@ -148,10 +148,14 @@ void Viewer::execute(int argc, char* argv[]) {
      const auto grey25 = hpcolor(0.25, 0.25, 0.25, 1.0);
      const auto grey50 = hpcolor(0.50, 0.50, 0.50, 1.0);
      const auto grey75 = hpcolor(0.75, 0.75, 0.75, 1.0);
-     const auto regular_edge_color = hpcolor(0.25, 0.25, 0.25, 0.0);
-     const auto cut_edge_color = hpcolor(1.0, 0.0, 1.0, 1.0);
-     const auto new_edge_color = hpcolor(0.0, 0.9, 0.4, 1.0);
-     const auto old_edge_color = hpcolor(0.5, 0.0, 0.8, 1.0);
+     //const auto regular_edge_color = hpcolor(0.25, 0.25, 0.25, 0.0);
+     //const auto cut_edge_color = hpcolor(1.0, 0.0, 1.0, 1.0);
+     //const auto new_edge_color = hpcolor(0.0, 0.9, 0.4, 1.0);
+     //const auto old_edge_color = hpcolor(0.5, 0.0, 0.8, 1.0);
+     const auto regular_edge_color = hpcolor(0.55, 0.55, 0.55, 0.0);
+     const auto cut_edge_color = hpcolor(0.1, 0.1, 0.2, 1.0);
+     const auto new_edge_color = hpcolor(0.1, 0.6, 0.0, 1.0);
+     const auto old_edge_color = hpcolor(0.5, 0.0, 0.0, 1.0);
 
      if (argc <= 1) {
           std::cout << "Usage: " << argv[0] << " <mesh.off> [initial-cut.hph]\n";
@@ -318,11 +322,11 @@ void Viewer::execute(int argc, char* argv[]) {
           ed_vx.setModelViewMatrix(viewMatrix);
           ed_vx.setProjectionMatrix(projectionMatrix);
           //ed_fr.setEdgeWidth(3.0);
-          ed_fr.setEdgeWidth(3.0);
+          ed_fr.setEdgeWidth(2.5);
           ed_fr.setLight(light);
-          ed_fr.setModelColor(hpcolor(0.5, 0.5, 0.5, 1.0)); //white);
-          ed_fr.setSqueezeScale(0.75);
-          ed_fr.setSqueezeMin(0.5);
+          ed_fr.setModelColor(hpcolor(1.0, 1.0, 1.0, 1.0)); //white);
+          ed_fr.setSqueezeScale(0.3);
+          ed_fr.setSqueezeMin(0.3);
           render(edp, rc31, size(triangles));
 #endif
 
