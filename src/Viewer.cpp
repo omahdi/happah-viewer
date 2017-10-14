@@ -20,6 +20,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <queue>
+#include <string>
 
 #include "Viewer.hpp"
 
@@ -38,20 +39,24 @@ Viewer::Viewer(hpuint width, hpuint height, const std::string& title)
 
 /// Variant of cut() that picks next edge by hop distance.
 /// Note: not fit for meshes with border!
-Indices geocut(const std::vector<Edge>& edges, hpindex t0 = 0) {
+template<class _Vertex>
+Indices geocut(const TriangleGraph<_Vertex>& graph, hpindex t0 = 0) {
+     const auto& edges = graph.getEdges();
+     const auto& vertices = graph.getVertices();
      struct edge_info {
-          hpindex ei, dist;
+          hpindex ei;
+          hpreal dist;
           // Note: invert meaning to turn max-heap into min-heap
           bool operator<(const edge_info& other) const { return dist > other.dist; }
      };
      auto cache = boost::dynamic_bitset<>(edges.size(), false);
      std::priority_queue<edge_info> pq;
      assert(t0 < edges.size() / 3);
-     for (hpindex ei = 0; ei <= 2; ei++) {
+     for (hpindex ei = 3*t0, last_ei = 3*t0+2; ei <= last_ei; ei++) {
           pq.push(edge_info{ei, 0});
           cache[ei] = true;
      }
-     return cut(edges, 0, [&](auto& neighbors) {
+     return basic_cut(edges, t0, [&](auto& neighbors) {
           //for(auto e : boost::irange(0u, hpindex(mesh.getEdges().size())))
           //     if(neighbors[e << 1] != std::numeric_limits<hpindex>::max() && neighbors[mesh.getEdge(e).opposite << 1] == std::numeric_limits<hpindex>::max()) return e;
           edge_info info;
@@ -72,7 +77,12 @@ Indices geocut(const std::vector<Edge>& edges, hpindex t0 = 0) {
           auto b0 = neighbors[e0 << 1] == std::numeric_limits<hpindex>::max();
           auto b1 = neighbors[e1 << 1] == std::numeric_limits<hpindex>::max();
           if (b0) {
-               pq.push(edge_info{edge.previous, info.dist+1});
+               const Point3D vu0 = vertices[edge.vertex].position;
+               const Point3D vu1 = vertices[edges[edge.next].vertex].position;
+               const Point3D vu2 = vertices[edges[edge.previous].vertex].position;
+               const Point3D vt0 = vertices[edges[edges[e].next].vertex].position;
+               const Point3D vu = (vu0+vu1+vu2) / hpreal(3), vt = (vt0+vu0+vu2) / hpreal(3);
+               pq.push(edge_info{edge.previous, info.dist+glm::distance(vt, vu)});
                cache[edge.previous] = true;
           } else
                cache[e0] = false;
@@ -101,7 +111,7 @@ Indices hopdist_cut(const std::vector<Edge>& edges, hpindex t0 = 0) {
           pq.push(edge_info{ei, 0});
           cache[ei] = true;
      }
-     return cut(edges, t0, [&](auto& neighbors) {
+     return basic_cut(edges, t0, [&](auto& neighbors) {
           //for(auto e : boost::irange(0u, hpindex(mesh.getEdges().size())))
           //     if(neighbors[e << 1] != std::numeric_limits<hpindex>::max() && neighbors[mesh.getEdge(e).opposite << 1] == std::numeric_limits<hpindex>::max()) return e;
           edge_info info;
@@ -137,6 +147,7 @@ Indices hopdist_cut(const std::vector<Edge>& edges, hpindex t0 = 0) {
 }
 
 void Viewer::execute(int argc, char* argv[]) {
+     using namespace std::string_literals;
      auto context = m_window.getContext();
      auto& viewport = m_window.getViewport();
 
@@ -178,9 +189,15 @@ void Viewer::execute(int argc, char* argv[]) {
      const auto the_cut = trim(graph, cut(graph));
 #else
      Indices the_cut;
-     if (argc >= 3)
-          the_cut = format::hph::read<Indices>(p(argv[2]));
-     else
+     if (argc >= 3) {
+          const std::string arg {argv[2]};
+          if (arg == "random"s)
+               the_cut = trim(graph, cut(graph.getEdges()));
+          else if (arg == "geo"s)
+               the_cut = trim(graph, geocut(graph));
+          else
+               the_cut = format::hph::read<Indices>(p(arg));
+     } else
           the_cut = trim(graph, hopdist_cut(graph.getEdges()));
 #endif
      for(auto e : the_cut){
@@ -236,9 +253,15 @@ void Viewer::execute(int argc, char* argv[]) {
      load("/happah/paint.h.glsl", p("shaders/paint.h.glsl"));
      load("/happah/geometry.h.glsl", p("shaders/geometry.h.glsl"));
 
+#if 1
      auto ed_fr = make_highlight_edge_fragment_shader();
      auto ed_gm = make_geometry_shader(p("shaders/hiedge.g.glsl"));
      auto ed_vx = make_highlight_edge_vertex_shader();
+#else
+     auto ed_fr = make_edge_fragment_shader();
+     auto ed_gm = make_geometry_shader(p("shaders/edge.g.glsl"));
+     auto ed_vx = make_edge_vertex_shader();
+#endif
      compile(ed_fr);
      compile(ed_gm);
      compile(ed_vx);
@@ -322,11 +345,13 @@ void Viewer::execute(int argc, char* argv[]) {
           ed_vx.setModelViewMatrix(viewMatrix);
           ed_vx.setProjectionMatrix(projectionMatrix);
           //ed_fr.setEdgeWidth(3.0);
-          ed_fr.setEdgeWidth(2.5);
+          ed_fr.setEdgeWidth(1.5);
           ed_fr.setLight(light);
           ed_fr.setModelColor(hpcolor(1.0, 1.0, 1.0, 1.0)); //white);
+#if 1
           ed_fr.setSqueezeScale(0.3);
           ed_fr.setSqueezeMin(0.3);
+#endif
           render(edp, rc31, size(triangles));
 #endif
 
