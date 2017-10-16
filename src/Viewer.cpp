@@ -252,19 +252,27 @@ void Viewer::execute(int argc, char* argv[]) {
      load("/happah/illumination.h.glsl", p("shaders/illumination.h.glsl"));
      load("/happah/paint.h.glsl", p("shaders/paint.h.glsl"));
      load("/happah/geometry.h.glsl", p("shaders/geometry.h.glsl"));
+     load("/happah/geometry.h.glsl", p("shaders/geometry.h.glsl"));
 
 #if 1
      auto ed_fr = make_highlight_edge_fragment_shader();
      auto ed_gm = make_geometry_shader(p("shaders/hiedge.g.glsl"));
      auto ed_vx = make_highlight_edge_vertex_shader();
+     compile(ed_fr);
+     compile(ed_gm);
+     compile(ed_vx);
+     auto cb_euc_vx = make_euclidean_checkerboard_vertex_shader();
+     //auto cb_euc_gm = make_euclidean_checkerboard_geometry_shader();
+     auto cb_euc_gm = make_geometry_shader(p("shaders/euclidean-checkerboard.g.glsl"));
+     auto cb_euc_fr = make_euclidean_checkerboard_fragment_shader();
+     compile(cb_euc_fr);
+     compile(cb_euc_gm);
+     compile(cb_euc_vx);
 #else
      auto ed_fr = make_edge_fragment_shader();
      auto ed_gm = make_geometry_shader(p("shaders/edge.g.glsl"));
      auto ed_vx = make_edge_vertex_shader();
 #endif
-     compile(ed_fr);
-     compile(ed_gm);
-     compile(ed_vx);
 
      //auto nm_gm = make_geometry_shader(p("shaders/normals.g.glsl"));
      //auto wf_fr = make_wireframe_fragment_shader();
@@ -277,6 +285,7 @@ void Viewer::execute(int argc, char* argv[]) {
 
      //auto wfp = make_program("wireframe triangle mesh", sm_vx, wf_gm, wf_fr);
      auto edp = make_program("edges triangle mesh", ed_vx, ed_gm, ed_fr);
+     auto cb_euc_p = make_program("Euclidean checkerboard pattern", cb_euc_vx, cb_euc_gm, cb_euc_fr);
 
      std::cout << "INFO: Making buffers." << std::endl;
 
@@ -296,6 +305,14 @@ void Viewer::execute(int argc, char* argv[]) {
      describe(va0, 0, position);
      describe(va0, 1, edgeColor);
      //describe(va0, 2, vertexColor);
+
+     auto cb_euc_coords = make_buffer(proj_coords);
+     auto attr_cb_position = make_attribute(0, 4, DataType::FLOAT);
+     auto attr_cb_uv_coord = make_attribute(1, 2, DataType::FLOAT);
+     auto va_chkb = make_vertex_array();
+     describe(va_chkb, 0, attr_cb_position);
+     describe(va_chkb, 1, attr_cb_uv_coord);
+     auto rc_chkb = make_render_context(va_chkb, bi0, PatchType::TRIANGLE);
 
      std::cout << "INFO: Making render contexts." << std::endl;
 
@@ -324,9 +341,8 @@ void Viewer::execute(int argc, char* argv[]) {
           auto viewMatrix = make_view_matrix(viewport);
           auto light = 0.6f*glm::normalize(Point3D(viewMatrix[0]));
 
-          activate(va0);
-
 #if 0
+          activate(va0);
           activate(wfp);
           activate(bv0, va0, 0);
           sm_vx.setModelViewMatrix(glm::translate(viewMatrix, Vector3D(-lengths.x - padding.x, lengths.y + padding.y, 0.0)));
@@ -339,6 +355,22 @@ void Viewer::execute(int argc, char* argv[]) {
 #endif
 
 #if 1
+		activate(va_chkb);
+          activate(edp);
+          activate(bv0, va_chkb, 0);
+          activate(cb_euc_coords, va_chkb, 1);
+          cb_euc_vx.setModelViewMatrix(viewMatrix);
+          cb_euc_vx.setProjectionMatrix(projectionMatrix);
+          //ed_fr.setEdgeWidth(3.0);
+          ed_fr.setEdgeWidth(1.0);
+          cb_fr.setColors(hpcolor(0.0, 0.0, 0.0, 1.0), hpcolor(1.0, 1.0, 1.0, 1.0));
+          cb_fr.setPeriod(hpvec2(0.05, 0.05));
+          cb_euc_fr.setLight(light);
+          render(cb_euc_p, rc_chkb);
+#endif
+
+#if 0
+          activate(va0);
           activate(edp);
           activate(bv3, va0, 0);
           activate(be3, va0, 1);
