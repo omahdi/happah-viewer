@@ -254,6 +254,83 @@ Indices hopdist_cut(const std::vector<Edge>& edges, hpindex t0 = 0) {
      });
 }
 
+#if 0
+std::vector<Edge> make_edges2(const Indices& indices) {
+     std::vector<Edge> edges;
+
+     auto nEdges = indices.size();//NOTE: The number of edges is >= to 3x the number of triangles; the number is greater if the mesh is not closed, that is, it has a border.
+     edges.reserve(nEdges);
+
+     using Key = std::pair<hpuint, hpuint>;
+     using Value = hpuint;
+
+     auto getHash = [](const Key& k) -> uint64_t {
+          int32_t d = k.first - k.second;
+          int32_t min = k.second + (d & d >> 31);
+          int32_t max = k.first - (d & d >> 31);
+          return ((uint64_t)max << 32 | min);
+     };
+
+     auto isKeysEqual = [](const Key& k1, const Key& k2) { return (k1.first == k2.first && k1.second == k2.second) || (k1.first == k2.second && k1.second == k2.first); };
+
+     using Map = std::unordered_map<Key, Value, decltype(getHash), decltype(isKeysEqual)>;
+     Map map(nEdges, getHash, isKeysEqual);
+
+     auto push_edge = [&](hpuint va, hpuint vb, hpuint next, hpuint previous) {
+          auto key = Key(va, vb);
+          auto i = map.find(key);
+          if(i == map.end()) {
+               map[key] = edges.size();
+               edges.emplace_back(vb, next, std::numeric_limits<hpuint>::max(), previous);
+          } else {
+               auto opposite = (*i).second;
+               edges[opposite].opposite = edges.size();
+               edges.emplace_back(vb, next, opposite, previous);
+          }
+     };
+
+     visit_triplets(indices, [&](auto v0, auto v1, auto v2) {
+          auto e0 = edges.size();
+          auto e1 = e0 + 1;
+          auto e2 = e0 + 2;
+
+          push_edge(v0, v1, e1, e2);
+          push_edge(v1, v2, e2, e0);
+          push_edge(v2, v0, e0, e1);
+     });
+
+     assert(edges.size() == indices.size());
+
+     auto i = std::find_if(std::begin(edges), std::end(edges), [](auto& edge) { return edge.opposite == std::numeric_limits<hpuint>::max(); });
+     std::cout << "---- i = " << std::distance(begin(edges), i) << "\n";
+     while(i != (std::begin(edges) + indices.size())) {
+          auto e = std::distance(std::begin(edges), i);
+          auto f = edges.size();
+          auto begin = e;
+          auto next = f;
+          auto previous = next - 2;
+          std::cout << "  in while loop, e = " << e << "\n";
+          while(true) {
+               auto opposite = e;
+               edges[e].opposite = next;
+               e = edges[e].previous;
+               edges.emplace_back(edges[e].vertex, ++next, opposite, ++previous);
+               if(e == begin) break;
+               while(edges[e].opposite != std::numeric_limits<hpuint>::max()) {
+                    e = edges[edges[e].opposite].previous;
+                    if(e == begin) goto exit;
+               }
+          }
+          exit:
+          edges[f].previous = edges.size() - 1;
+          edges.back().next = f;
+          i = std::find_if(std::begin(edges), std::begin(edges) + indices.size(), [](auto& edge) { return edge.opposite == std::numeric_limits<hpuint>::max(); });
+     }
+
+     return edges;
+}//make_edges
+#endif
+
 void Viewer::execute(int argc, char* argv[]) {
      using namespace std::string_literals;
      auto context = m_window.getContext();
@@ -277,7 +354,7 @@ void Viewer::execute(int argc, char* argv[]) {
      const auto old_edge_color = hpcolor(0.5, 0.0, 0.0, 1.0);
 
      if (argc <= 1) {
-          std::cout << "Usage: " << argv[0] << " <mesh.off> [initial-cut.hph]\n";
+          std::cout << "Usage: " << argv[0] << " <mesh.off> [cb] [disk <uv.xyz>] [geo|curv|hop] [cut <initial-cut.hph>]\n";
           return;
      }
      std::cout << "INFO: Importing " << argv[1] << '.' << std::endl;
@@ -285,6 +362,8 @@ void Viewer::execute(int argc, char* argv[]) {
      auto content = format::off::read(argv[1]);
      auto mesh = make_triangle_mesh<VertexP3>(content);
      auto graph = make_triangle_graph(mesh);
+     //auto edges2 {make_edges2(mesh.getIndices())};
+
      auto edgeColors = std::vector<hpcolor>(3 * size(mesh), regular_edge_color); //std::vector<hpcolor>(3 * size(mesh), blue);
      auto triangleColors = std::vector<hpcolor>(3 * size(mesh), blue);
      auto vertexColors = std::vector<hpcolor>(3 * size(mesh), red); //std::vector<hpcolor>(3 * size(mesh), blue);
@@ -296,8 +375,11 @@ void Viewer::execute(int argc, char* argv[]) {
 #if 0
      const auto the_cut = trim(graph, cut(graph));
 #else
+     std::cout << (3*size(mesh)) << " 3*size(mesh), " << graph.getEdges().size() << " graph.getEdges().size()\n";
+     std::cout << graph.getNumberOfTriangles() << " graph.getNumberOfTriangles()\n";
+     std::cout << graph.getNumberOfEdges() << " graph.getNumberOfEdges()\n";
      bool use_chkb = false;
-     bool have_disk = false;
+     bool have_disk = 3*size(mesh) < graph.getEdges().size();
      unsigned arg_index = 2;
      Indices the_cut;
      //TriangleGraph<VertexP2> the_disk;
@@ -334,7 +416,6 @@ void Viewer::execute(int argc, char* argv[]) {
                continue;
           }
           if (arg == "disk"s) {
-               have_disk = true;
                use_chkb = true;
                arg_index++;
                if (argc == arg_index) {
@@ -353,14 +434,24 @@ void Viewer::execute(int argc, char* argv[]) {
           if (last_index == arg_index)
                break;         // nothing more to do
      }
-     if (size(the_cut) == 0) {
+     if (!have_disk && size(the_cut) == 0) {
           std::cout << "generating default cut [hopdist_cut()]\n";
           the_cut = trim(graph, hopdist_cut(graph.getEdges()));
+     } else if (have_disk && size(the_cut) == 0) {
+          const auto& edges = graph.getEdges();
+          const auto num_tris = graph.getNumberOfTriangles();
+          the_cut.reserve(size(edges) - 3*num_tris);
+          for (hpindex ei = size(edges)-1; ei >= 3*num_tris; ei--)
+               the_cut.emplace_back(edges[ei].opposite);
      }
 #endif
      for(auto e : the_cut){
+          std::cout << "setting color of edge #e=" << e << "\n";
           edgeColors[e] = cut_edge_color;
-          edgeColors[graph.getEdge(e).opposite] = cut_edge_color;
+          const auto opp = graph.getEdge(e).opposite;
+          if (opp <= 3*size(mesh))
+               edgeColors[opp] = cut_edge_color;
+#if 0
           visit_spokes(make_spokes_enumerator(graph.getEdges(), e), [&](auto e) {
                static constexpr hpuint o[3] = { 1, 2, 0 };
 
@@ -370,33 +461,35 @@ void Viewer::execute(int argc, char* argv[]) {
                vertexColors[3 * t + o[i]] = cut_edge_color;
                vertexColors[e] = cut_edge_color;
           });
+#endif
      }
-     CutGraph cut_graph;
-     try {
-          cut_graph = cut_graph_from_edges(graph, the_cut);
-          remove_chords(cut_graph, graph);
-          {
-               using std::begin;
-               using std::end;
-               auto sorted_cut = the_cut;
-               std::sort(begin(sorted_cut), end(sorted_cut));
-               auto reduced_cut = cut_edges(cut_graph);
-               std::sort(begin(reduced_cut), end(reduced_cut));
-               std::vector<hpindex> sym_diff;
-               sym_diff.reserve((sorted_cut.size()-reduced_cut.size())*2);
-               std::set_symmetric_difference(
-                    begin(sorted_cut), end(sorted_cut),
-                    begin(reduced_cut), end(reduced_cut),
-                    std::back_inserter(sym_diff));
-               for (auto ei : sym_diff) {
-                    const auto is_new = std::binary_search(begin(reduced_cut), end(reduced_cut), ei);
-                    const auto opp = graph.getEdge(ei).opposite;
-                    edgeColors[ei] = is_new ? new_edge_color : old_edge_color;
-                    edgeColors[opp] = is_new ? new_edge_color : old_edge_color;
+     if (!have_disk) {
+          try {
+               auto cut_graph {cut_graph_from_edges(graph, the_cut)};
+               remove_chords(cut_graph, graph);
+               {
+                    using std::begin;
+                    using std::end;
+                    auto sorted_cut = the_cut;
+                    std::sort(begin(sorted_cut), end(sorted_cut));
+                    auto reduced_cut = cut_edges(cut_graph);
+                    std::sort(begin(reduced_cut), end(reduced_cut));
+                    std::vector<hpindex> sym_diff;
+                    sym_diff.reserve((sorted_cut.size()-reduced_cut.size())*2);
+                    std::set_symmetric_difference(
+                         begin(sorted_cut), end(sorted_cut),
+                         begin(reduced_cut), end(reduced_cut),
+                         std::back_inserter(sym_diff));
+                    for (auto ei : sym_diff) {
+                         const auto is_new = std::binary_search(begin(reduced_cut), end(reduced_cut), ei);
+                         const auto opp = graph.getEdge(ei).opposite;
+                         edgeColors[ei] = is_new ? new_edge_color : old_edge_color;
+                         edgeColors[opp] = is_new ? new_edge_color : old_edge_color;
+                    }
                }
+          } catch (const std::exception& ecp) {
+               std::cout << "WARN: Exception while building cut graph: " << ecp.what() << "\n";
           }
-     } catch (const std::exception& ecp) {
-          std::cout << "WARN: Exception while building cut graph: " << ecp.what() << "\n";
      }
 
      if (use_chkb && !have_disk) {
