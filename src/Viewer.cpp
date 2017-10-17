@@ -593,6 +593,8 @@ void Viewer::execute(int argc, char* argv[]) {
      //glEnable(GL_BLEND);
      //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
      //glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+     glDisable(GL_CULL_FACE);
+     //glCullFace(GL_FRONT);
      glEnable(GL_DEPTH_TEST);
      m_window.enable(Window::RenderToggle::DEPTH_TEST);
      while(!glfwWindowShouldClose(context) && !m_window.quitFlag()) {
@@ -604,10 +606,10 @@ void Viewer::execute(int argc, char* argv[]) {
           if (m_window.enabled(Window::RenderToggle::ALPHA_BLENDING)) {
                glEnable(GL_BLEND);
                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-               glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+               //glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
           } else {
                glDisable(GL_BLEND);
-               glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+               //glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
           }
           glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
