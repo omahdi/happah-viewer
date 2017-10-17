@@ -50,7 +50,7 @@ void Window::onCursorPosEvent(double x, double y) {
           if (!m_ctrlPressed)
                m_viewport.rotate(m_x, m_y, x, y);
           else
-               m_viewport.translate(Vector2D(x - m_x, y - m_y)*hpreal(m_mousetrans_sensitivity));
+               m_viewport.translate(Vector2D(x - m_x, m_y - y)*hpreal(m_mousetrans_sensitivity));
           m_x = x;
           m_y = y;
      }
@@ -141,6 +141,26 @@ void Window::onKeyEvent(int key, int code, int action, int mods) {
                          get<2>(m_eye[i]) = buf[3*i + 2];
                     }
                }
+          }
+          case GLFW_KEY_B: {
+		     if ((mods & GLFW_MOD_SHIFT) != 0)
+                    toggle(RenderToggle::ALPHA_BLENDING);
+               break;
+          }
+          case GLFW_KEY_D: {
+		     if ((mods & GLFW_MOD_SHIFT) != 0)
+                    toggle(RenderToggle::DEPTH_TEST);
+               break;
+          }
+          case GLFW_KEY_T: {
+		     if ((mods & GLFW_MOD_SHIFT) != 0) {
+                    enable(RenderToggle::ALPHA_BLENDING);
+                    disable(RenderToggle::DEPTH_TEST);
+               } else {
+                    disable(RenderToggle::ALPHA_BLENDING);
+                    enable(RenderToggle::DEPTH_TEST);
+               }
+               break;
           }
           }
      }

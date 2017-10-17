@@ -61,7 +61,7 @@ private:
      Viewport m_viewport;
      double m_x;//mouse coordinates
      double m_y;
-     double m_mousetrans_sensitivity {0.01};
+     double m_mousetrans_sensitivity {0.003};
      bool m_mousezoom {false};
      Point3D m_mousezoom_eye_center, m_mousezoom_eye_position;
      Vector3D m_mousezoom_eye_up;
@@ -97,6 +97,8 @@ public:
           _NIL = 0,
           WIREFRAME,
           CHECKERBOARD,
+		  ALPHA_BLENDING,
+		  DEPTH_TEST,
           _COUNT
      };
      static_assert(static_cast<int>(RenderToggle::_COUNT) <= 32);

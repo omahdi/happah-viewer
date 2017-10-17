@@ -446,7 +446,6 @@ void Viewer::execute(int argc, char* argv[]) {
      }
 #endif
      for(auto e : the_cut){
-          std::cout << "setting color of edge #e=" << e << "\n";
           edgeColors[e] = cut_edge_color;
           const auto opp = graph.getEdge(e).opposite;
           if (opp <= 3*size(mesh))
@@ -595,8 +594,21 @@ void Viewer::execute(int argc, char* argv[]) {
      //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
      //glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
      glEnable(GL_DEPTH_TEST);
+     m_window.enable(Window::RenderToggle::DEPTH_TEST);
      while(!glfwWindowShouldClose(context) && !m_window.quitFlag()) {
           glfwPollEvents();
+          if (m_window.enabled(Window::RenderToggle::DEPTH_TEST))
+               glEnable(GL_DEPTH_TEST);
+          else
+               glDisable(GL_DEPTH_TEST);
+          if (m_window.enabled(Window::RenderToggle::ALPHA_BLENDING)) {
+               glEnable(GL_BLEND);
+               glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+               glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+          } else {
+               glDisable(GL_BLEND);
+               glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+          }
           glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
           auto projectionMatrix = make_projection_matrix(viewport);
@@ -639,7 +651,7 @@ void Viewer::execute(int argc, char* argv[]) {
                //ed_fr.setEdgeWidth(3.0);
                ed_fr.setEdgeWidth(1.0);
                ed_fr.setLight(light);
-               ed_fr.setModelColor(hpcolor(1.0, 1.0, 1.0, 1.0)); //white);
+               ed_fr.setModelColor(hpcolor(1.0, 1.0, 1.0, 0.0)); //white);
                ed_fr.setSqueezeScale(0.45);
                ed_fr.setSqueezeMin(0.35);
                render(edp, rc_tris);
