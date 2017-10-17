@@ -495,7 +495,7 @@ void Viewer::execute(int argc, char* argv[]) {
      //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
      //glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
      glEnable(GL_DEPTH_TEST);
-     while(!glfwWindowShouldClose(context)) {
+     while(!glfwWindowShouldClose(context) && !m_window.quitFlag()) {
           glfwPollEvents();
           glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -516,8 +516,7 @@ void Viewer::execute(int argc, char* argv[]) {
           render(wfp, rc0);
 #endif
 
-          if (use_chkb && have_disk) {
-#if 1
+          if (use_chkb && have_disk && m_window.enabled(Window::RenderToggle::CHECKERBOARD)) {
                activate(va_chkb);
                activate(cb_euc_p);
                activate(rc_chkb, va_chkb, 0);
@@ -529,13 +528,10 @@ void Viewer::execute(int argc, char* argv[]) {
                cb_euc_fr.setPeriod(hpvec2(0.05, 0.05));
                cb_euc_fr.setLight(light);
                render(cb_euc_p, rc_chkb);
-#endif
-          } else {
-#if 1
+          }
+          if (m_window.enabled(Window::RenderToggle::WIREFRAME)) {
                activate(va0);
                activate(edp);
-               //activate(bv3, va0, 0);
-               //activate(be3, va0, 1);
                activate(rc_tris, va0, 0);
                activate(bf_ecol, va0, 1);
                ed_vx.setModelViewMatrix(viewMatrix);
@@ -547,7 +543,6 @@ void Viewer::execute(int argc, char* argv[]) {
                ed_fr.setSqueezeScale(0.45);
                ed_fr.setSqueezeMin(0.35);
                render(edp, rc_tris);
-#endif
           }
 
           glfwSwapBuffers(context);

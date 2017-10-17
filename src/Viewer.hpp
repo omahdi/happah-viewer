@@ -24,6 +24,13 @@ public:
 private:
      Window m_window;
      
+     bool render_solid_mesh {false};
+     bool render_solid_tris {false};
+     bool render_quintic {false};
+     bool render_loop_box_spline {false};
+     bool render_point_cloud {false};
+     bool render_wireframe {true};
+     bool render_checkerboard {true};
 };//Viewer
 
 }//namespace happah
