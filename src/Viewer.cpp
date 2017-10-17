@@ -300,7 +300,8 @@ void Viewer::execute(int argc, char* argv[]) {
      bool have_disk = false;
      unsigned arg_index = 2;
      Indices the_cut;
-     TriangleGraph<VertexP2> the_disk;
+     //TriangleGraph<VertexP2> the_disk;
+     std::vector<VertexP2> uv_coords;
      while (argc >= arg_index+1) {
           const auto last_index = arg_index;
           std::string arg {argv[arg_index]};
@@ -337,10 +338,15 @@ void Viewer::execute(int argc, char* argv[]) {
                use_chkb = true;
                arg_index++;
                if (argc == arg_index) {
-                    std::cout << "disk <disk-graph.off>: missing argument\n";
+                    std::cout << "disk <uv.xyz>: missing arguments\n";
                     throw std::runtime_error("missing argument");
                }
-               the_disk = make_triangle_graph(make_triangle_mesh<VertexP2>(format::off::read(argv[arg_index])));
+               //the_disk = make_triangle_graph(make_triangle_mesh<VertexP2>(format::off::read(argv[arg_index])));
+               uv_coords = format::xyz::read<std::vector<VertexP2>>(argv[arg_index]);
+               if (size(uv_coords) != graph.getNumberOfVertices()) {
+                    std::cout << "Error: number of vertices don't match (" << size(uv_coords) << " uv coordinates, " << graph.getNumberOfVertices() << " vertices in mesh.\n";
+                    throw std::runtime_error("inconsistent number of vertices");
+               }
                arg_index++;
                continue;
           }
@@ -467,7 +473,8 @@ void Viewer::execute(int argc, char* argv[]) {
      //describe(va0, 2, vertexColor);
 
      //auto cb_euc_coords = make_buffer(proj_coords);
-     auto& bf_euc_coords = memory.insert(make_buffer(the_disk.getVertices()));
+     //auto& bf_euc_coords = memory.insert(make_buffer(the_disk.getVertices()));
+     auto& bf_euc_coords = memory.insert(make_buffer(uv_coords));
      auto attr_cb_position = make_attribute(0, 4, DataType::FLOAT);
      auto attr_cb_uv_coord = make_attribute(1, 2, DataType::FLOAT);
      auto va_chkb = make_vertex_array();
