@@ -8,6 +8,7 @@
 // 2017.08 - Hedwig Amberg    - Added new shader for coloring both triangles and edges.
 
 #include <happah/format.hpp>
+#include <happah/geometry/Vertex.hpp>
 #include <happah/geometry/LoopBoxSplineMesh.hpp>
 #include <happah/geometry/BezierTriangleMesh.hpp>
 #include <happah/geometry/TriangleArray.hpp>
@@ -36,6 +37,113 @@ Viewer::Viewer(hpuint width, hpuint height, const std::string& title)
      glfwMakeContextCurrent(m_window.getContext());
      if(!gladLoadGL()) throw std::runtime_error("Failed to initialize Glad.");
 }
+///
+/// Variant of cut() that picks next edge based on smallest curvature.
+/// Note: not fit for meshes with border!
+template<class Vertex>
+Indices curvdist_cut(const TriangleGraph<Vertex>& graph, hpindex t0 = 0) { // {{{1
+     const auto& edges = graph.getEdges();
+     struct edge_info {
+          hpindex ei;
+          hpreal dist;
+          unsigned hops;
+          // Note: invert meaning to turn max-heap into min-heap
+          bool operator<(const edge_info& other) const {
+               //return (dist - other.dist) < 0.1 || hops > other.hops;
+               //return dist - other.dist > 0;
+               return dist - other.dist < 0;
+          }
+     };
+     auto cache = boost::dynamic_bitset<>(edges.size(), false);
+     std::priority_queue<edge_info> pq;
+     assert(t0 < edges.size() / 3);
+     for (hpindex ei = 3*t0, last_ei = 3*t0+2; ei <= last_ei; ei++) {
+          pq.push(edge_info{ei, hpreal{0}, 0});
+          cache[ei] = true;
+     }
+     // computes angle in radians at p0 between (p1-p0) and (p2-p0)
+     const auto edge_angle = [](hpvec3 p0, hpvec3 p1, hpvec3 p2) {
+          hpvec3 u {p1-p0}, v {p2-p0};
+          return std::acos(glm::dot(u, v) / (glm::length(u)*glm::length(v)));
+     };
+     const auto triarea = [](hpvec3 p0, hpvec3 p1, hpvec3 p2) {
+          return 0.5*glm::length(glm::cross(p1-p0, p2-p0));
+     };
+     const auto heron = [](hpvec3 p0, hpvec3 p1, hpvec3 p2) {
+          hpvec3 u {p1-p0}, v {p2-p1}, w {p0-p2};
+          hpreal lu {glm::length(u)}, lv {glm::length(v)}, lw {glm::length(w)};
+          hpreal s = 0.5*(lu+lv+lw);
+          return std::sqrt(s*(s-lu)*(s-lv)*(s-lw));
+     };
+     const auto gaussc = [&](hpindex v0) {
+          const auto pos_v0 = graph.getVertex(v0).position;
+          hpreal sum_area = 0.0, sum_angles = 0.0;
+          visit_spokes(make_spokes_enumerator(edges, graph.getOutgoing(v0)),
+               [&] (auto ei) {
+                    const auto& e {graph.getEdge(ei)};
+                    const auto& pos_v1 = graph.getVertex(e.vertex).position;
+                    const auto& pos_v2 = graph.getVertex(graph.getEdge(e.next).vertex).position;
+                    sum_area += triarea(pos_v0, pos_v1, pos_v2);
+                    sum_angles += edge_angle(pos_v0, pos_v1, pos_v2);
+               });
+          return 3*(2.0*M_PI - sum_angles) / sum_area;
+          //return 2.0*M_PI - sum_angles;      // only deficit
+     };
+     const hpindex num_vertices = graph.getNumberOfVertices();
+     const hpindex num_triangles = graph.getNumberOfTriangles();
+     std::vector<hpreal> angular_deficit;
+     angular_deficit.reserve(num_vertices);
+     for (hpindex vi = 0; vi < num_vertices; vi++)
+          angular_deficit.push_back(gaussc(vi));
+     std::vector<hpreal> avg_deficit;
+     avg_deficit.reserve(num_triangles);
+     // Simple heuristic for judging the "flatness" of a triangle in terms of
+     // the angle deficit of its defining vertices.
+     for (hpindex ti = 0; ti < num_triangles; ti++) {
+          const auto& e0 = graph.getEdge(3*ti + 0);
+          const auto& e1 = graph.getEdge(3*ti + 1);
+          const auto& e2 = graph.getEdge(3*ti + 2);
+          avg_deficit.push_back((angular_deficit[e2.vertex] + angular_deficit[e0.vertex] + angular_deficit[e1.vertex])/3);
+          //avg_deficit.push_back(std::max(std::max(angular_deficit[e2.vertex], angular_deficit[e0.vertex]), angular_deficit[e1.vertex]));
+          //avg_deficit.push_back(std::min(std::min(angular_deficit[e2.vertex], angular_deficit[e0.vertex]), angular_deficit[e1.vertex]));
+     }
+
+     return basic_cut(edges, t0, [&](auto& neighbors) {
+          //for(auto e : boost::irange(0u, hpindex(mesh.getEdges().size())))
+          //     if(neighbors[e << 1] != std::numeric_limits<hpindex>::max() && neighbors[mesh.getEdge(e).opposite << 1] == std::numeric_limits<hpindex>::max()) return e;
+          edge_info info;
+          hpindex e;
+          while (!pq.empty()) {
+               info = pq.top();
+               e = info.ei;
+               if (cache[e])
+                    break;
+               pq.pop();
+          }
+          if (pq.empty())
+               return std::numeric_limits<hpindex>::max();
+          pq.pop();
+          auto& edge = edges[edges[e].opposite];
+          auto e0 = edges[edge.previous].opposite;
+          auto e1 = edges[edge.next].opposite;
+          auto b0 = neighbors[e0 << 1] == std::numeric_limits<hpindex>::max();
+          auto b1 = neighbors[e1 << 1] == std::numeric_limits<hpindex>::max();
+          if (b0) {
+               auto next_tri = make_triangle_index(graph.getEdge(edge.previous).opposite);
+               pq.push(edge_info{edge.previous, avg_deficit[next_tri], info.hops+1});
+               cache[edge.previous] = true;
+          } else
+               cache[e0] = false;
+          if (b1) {
+               auto next_tri = make_triangle_index(graph.getEdge(edge.next).opposite);
+               pq.push(edge_info{edge.next, avg_deficit[next_tri], info.hops+1});
+               cache[edge.next] = true;
+          } else
+               cache[e1] = false;
+          cache[e] = false;
+          return hpindex(e);
+     });
+}    // }}}1
 
 /// Variant of cut() that picks next edge by hop distance.
 /// Note: not fit for meshes with border!
@@ -188,17 +296,48 @@ void Viewer::execute(int argc, char* argv[]) {
 #if 0
      const auto the_cut = trim(graph, cut(graph));
 #else
+     bool use_chkb = false;
+     bool have_disk = false;
+     unsigned arg_index = 2;
      Indices the_cut;
-     if (argc >= 3) {
-          const std::string arg {argv[2]};
-          if (arg == "random"s)
+     TriangleGraph<VertexP2> the_disk;
+     if (argc >= arg_index+1) {
+          std::string arg {argv[arg_index]};
+          if (arg == "cb"s) {
+               use_chkb = true;
+               arg_index++;
+          }
+     }
+     if (argc >= arg_index+1) {
+          std::string arg {argv[arg_index]};
+          if (arg == "random"s) {
                the_cut = trim(graph, cut(graph.getEdges()));
-          else if (arg == "geo"s)
+               arg_index++;
+          } else if (arg == "geo"s) {
                the_cut = trim(graph, geocut(graph));
-          else
+               arg_index++;
+          } else if (arg == "curv"s) {
+               the_cut = trim(graph, curvdist_cut(graph));
+               arg_index++;
+          } else {
                the_cut = format::hph::read<Indices>(p(arg));
+               arg_index++;
+          }
      } else
           the_cut = trim(graph, hopdist_cut(graph.getEdges()));
+     if (argc >= arg_index+1) {
+          std::string arg {argv[arg_index]};
+          if (arg == "disk"s) {
+               have_disk = true;
+               arg_index++;
+               if (argc == arg_index) {
+                    std::cout << "disk <disk-graph.off>: missing argument\n";
+                    throw std::runtime_error("missing argument");
+               }
+               the_disk = make_triangle_graph(make_triangle_mesh<VertexP2>(format::off::read(argv[arg_index])));
+               arg_index++;
+          }
+     }
 #endif
      for(auto e : the_cut){
           edgeColors[e] = cut_edge_color;
@@ -213,8 +352,9 @@ void Viewer::execute(int argc, char* argv[]) {
                vertexColors[e] = cut_edge_color;
           });
      }
+     CutGraph cut_graph;
      try {
-          auto cut_graph {cut_graph_from_edges(graph, the_cut)};
+          cut_graph = cut_graph_from_edges(graph, the_cut);
           remove_chords(cut_graph, graph);
           {
                using std::begin;
@@ -238,6 +378,11 @@ void Viewer::execute(int argc, char* argv[]) {
           }
      } catch (const std::exception& ecp) {
           std::cout << "WARN: Exception while building cut graph: " << ecp.what() << "\n";
+     }
+
+     if (use_chkb && !have_disk) {
+          std::cout << "Error: checkerboard without explicit disk mesh is not implemented.\n";
+          throw std::runtime_error("not implemented");
      }
 
      //TODO: only for testing !!!
@@ -289,10 +434,12 @@ void Viewer::execute(int argc, char* argv[]) {
 
      std::cout << "INFO: Making buffers." << std::endl;
 
-     auto bv0 = make_buffer(mesh.getVertices());
-     auto bv3 = make_buffer(triangles.getVertices());
-     auto bi0 = make_buffer(mesh.getIndices());
-     auto be3 = make_buffer(edgeColors);
+     auto memory = Memory();
+     //auto bv0 = make_buffer(mesh.getVertices());
+     //auto bv3 = make_buffer(triangles.getVertices());
+     //auto bi0 = make_buffer(mesh.getIndices());
+     //auto be3 = make_buffer(edgeColors);
+     auto& bf_ecol = memory.insert(make_buffer(edgeColors));
 
      std::cout << "INFO: Making vertex arrays." << std::endl;
 
@@ -306,17 +453,19 @@ void Viewer::execute(int argc, char* argv[]) {
      describe(va0, 1, edgeColor);
      //describe(va0, 2, vertexColor);
 
-     auto cb_euc_coords = make_buffer(proj_coords);
+     //auto cb_euc_coords = make_buffer(proj_coords);
+     auto& bf_euc_coords = memory.insert(make_buffer(the_disk.getVertices()));
      auto attr_cb_position = make_attribute(0, 4, DataType::FLOAT);
      auto attr_cb_uv_coord = make_attribute(1, 2, DataType::FLOAT);
      auto va_chkb = make_vertex_array();
      describe(va_chkb, 0, attr_cb_position);
      describe(va_chkb, 1, attr_cb_uv_coord);
-     auto rc_chkb = make_render_context(va_chkb, bi0, PatchType::TRIANGLE);
+     auto rc_chkb = make_render_context(memory, mesh);
 
      std::cout << "INFO: Making render contexts." << std::endl;
 
-     auto rc31 = make_render_context(va0, PatchType::TRIANGLE);
+     //auto rc31 = make_render_context(va0, PatchType::TRIANGLE);
+     auto rc_tris = make_render_context(memory, triangles);
 
      std::cout << "INFO: Setting up scene." << std::endl;
 
@@ -354,8 +503,8 @@ void Viewer::execute(int argc, char* argv[]) {
           render(wfp, rc0);
 #endif
 
-#if 1
-		activate(va_chkb);
+#if 0
+          activate(va_chkb);
           activate(edp);
           activate(bv0, va_chkb, 0);
           activate(cb_euc_coords, va_chkb, 1);
@@ -366,14 +515,16 @@ void Viewer::execute(int argc, char* argv[]) {
           cb_fr.setColors(hpcolor(0.0, 0.0, 0.0, 1.0), hpcolor(1.0, 1.0, 1.0, 1.0));
           cb_fr.setPeriod(hpvec2(0.05, 0.05));
           cb_euc_fr.setLight(light);
-          render(cb_euc_p, rc_chkb);
+          render(cb_euc_p, bi0, rc_chkb);
 #endif
 
-#if 0
+#if 1
           activate(va0);
           activate(edp);
-          activate(bv3, va0, 0);
-          activate(be3, va0, 1);
+          //activate(bv3, va0, 0);
+          //activate(be3, va0, 1);
+          activate(rc_tris, va0, 0);
+          activate(bf_ecol, va0, 1);
           ed_vx.setModelViewMatrix(viewMatrix);
           ed_vx.setProjectionMatrix(projectionMatrix);
           //ed_fr.setEdgeWidth(3.0);
@@ -384,7 +535,7 @@ void Viewer::execute(int argc, char* argv[]) {
           ed_fr.setSqueezeScale(0.45);
           ed_fr.setSqueezeMin(0.35);
 #endif
-          render(edp, rc31, size(triangles));
+          render(edp, rc_tris);
 #endif
 
           glfwSwapBuffers(context);
