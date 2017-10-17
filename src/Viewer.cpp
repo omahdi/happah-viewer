@@ -301,34 +301,40 @@ void Viewer::execute(int argc, char* argv[]) {
      unsigned arg_index = 2;
      Indices the_cut;
      TriangleGraph<VertexP2> the_disk;
-     if (argc >= arg_index+1) {
+     while (argc >= arg_index+1) {
+          const auto last_index = arg_index;
           std::string arg {argv[arg_index]};
+          std::cout << "- program argument: " << arg << "\n";
           if (arg == "cb"s) {
                use_chkb = true;
                arg_index++;
+               continue;
           }
-     }
-     if (argc >= arg_index+1) {
-          std::string arg {argv[arg_index]};
           if (arg == "random"s) {
                the_cut = trim(graph, cut(graph.getEdges()));
                arg_index++;
+               continue;
           } else if (arg == "geo"s) {
                the_cut = trim(graph, geocut(graph));
                arg_index++;
+               continue;
           } else if (arg == "curv"s) {
                the_cut = trim(graph, curvdist_cut(graph));
                arg_index++;
-          } else {
-               the_cut = format::hph::read<Indices>(p(arg));
+               continue;
+          } else if (arg == "cut"s) {
                arg_index++;
+               if (argc == arg_index) {
+                    std::cout << "cut <cut-edges.hph>: missing argument\n";
+                    throw std::runtime_error("missing argument");
+               }
+               the_cut = format::hph::read<Indices>(p(argv[arg_index]));
+               arg_index++;
+               continue;
           }
-     } else
-          the_cut = trim(graph, hopdist_cut(graph.getEdges()));
-     if (argc >= arg_index+1) {
-          std::string arg {argv[arg_index]};
           if (arg == "disk"s) {
                have_disk = true;
+               use_chkb = true;
                arg_index++;
                if (argc == arg_index) {
                     std::cout << "disk <disk-graph.off>: missing argument\n";
@@ -336,7 +342,14 @@ void Viewer::execute(int argc, char* argv[]) {
                }
                the_disk = make_triangle_graph(make_triangle_mesh<VertexP2>(format::off::read(argv[arg_index])));
                arg_index++;
+               continue;
           }
+          if (last_index == arg_index)
+               break;         // nothing more to do
+     }
+     if (size(the_cut) == 0) {
+          std::cout << "generating default cut [hopdist_cut()]\n";
+          the_cut = trim(graph, hopdist_cut(graph.getEdges()));
      }
 #endif
      for(auto e : the_cut){
@@ -503,40 +516,39 @@ void Viewer::execute(int argc, char* argv[]) {
           render(wfp, rc0);
 #endif
 
-#if 0
-          activate(va_chkb);
-          activate(edp);
-          activate(bv0, va_chkb, 0);
-          activate(cb_euc_coords, va_chkb, 1);
-          cb_euc_vx.setModelViewMatrix(viewMatrix);
-          cb_euc_vx.setProjectionMatrix(projectionMatrix);
-          //ed_fr.setEdgeWidth(3.0);
-          ed_fr.setEdgeWidth(1.0);
-          cb_fr.setColors(hpcolor(0.0, 0.0, 0.0, 1.0), hpcolor(1.0, 1.0, 1.0, 1.0));
-          cb_fr.setPeriod(hpvec2(0.05, 0.05));
-          cb_euc_fr.setLight(light);
-          render(cb_euc_p, bi0, rc_chkb);
-#endif
-
+          if (use_chkb && have_disk) {
 #if 1
-          activate(va0);
-          activate(edp);
-          //activate(bv3, va0, 0);
-          //activate(be3, va0, 1);
-          activate(rc_tris, va0, 0);
-          activate(bf_ecol, va0, 1);
-          ed_vx.setModelViewMatrix(viewMatrix);
-          ed_vx.setProjectionMatrix(projectionMatrix);
-          //ed_fr.setEdgeWidth(3.0);
-          ed_fr.setEdgeWidth(1.0);
-          ed_fr.setLight(light);
-          ed_fr.setModelColor(hpcolor(1.0, 1.0, 1.0, 1.0)); //white);
+               activate(va_chkb);
+               activate(cb_euc_p);
+               activate(rc_chkb, va_chkb, 0);
+               activate(bf_euc_coords, va_chkb, 1);
+               cb_euc_vx.setModelViewMatrix(viewMatrix);
+               cb_euc_vx.setProjectionMatrix(projectionMatrix);
+               //ed_fr.setEdgeWidth(3.0);
+               cb_euc_fr.setColors(hpcolor(0.0, 0.0, 0.0, 1.0), hpcolor(1.0, 1.0, 1.0, 1.0));
+               cb_euc_fr.setPeriod(hpvec2(0.05, 0.05));
+               cb_euc_fr.setLight(light);
+               render(cb_euc_p, rc_chkb);
+#endif
+          } else {
 #if 1
-          ed_fr.setSqueezeScale(0.45);
-          ed_fr.setSqueezeMin(0.35);
+               activate(va0);
+               activate(edp);
+               //activate(bv3, va0, 0);
+               //activate(be3, va0, 1);
+               activate(rc_tris, va0, 0);
+               activate(bf_ecol, va0, 1);
+               ed_vx.setModelViewMatrix(viewMatrix);
+               ed_vx.setProjectionMatrix(projectionMatrix);
+               //ed_fr.setEdgeWidth(3.0);
+               ed_fr.setEdgeWidth(1.0);
+               ed_fr.setLight(light);
+               ed_fr.setModelColor(hpcolor(1.0, 1.0, 1.0, 1.0)); //white);
+               ed_fr.setSqueezeScale(0.45);
+               ed_fr.setSqueezeMin(0.35);
+               render(edp, rc_tris);
 #endif
-          render(edp, rc_tris);
-#endif
+          }
 
           glfwSwapBuffers(context);
      }
