@@ -434,6 +434,8 @@ void Viewer::execute(int argc, char* argv[]) {
           if (last_index == arg_index)
                break;         // nothing more to do
      }
+     while (argc >= arg_index+1)
+          std::cout << "Warning: extra argument " << argv[arg_index++] << "\n";
      if (!have_disk && size(the_cut) == 0) {
           std::cout << "generating default cut [hopdist_cut()]\n";
           the_cut = trim(graph, hopdist_cut(graph.getEdges()));
