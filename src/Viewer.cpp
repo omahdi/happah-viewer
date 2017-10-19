@@ -651,11 +651,12 @@ void Viewer::execute(int argc, char* argv[]) {
                ed_vx.setModelViewMatrix(viewMatrix);
                ed_vx.setProjectionMatrix(projectionMatrix);
                //ed_fr.setEdgeWidth(3.0);
-               ed_fr.setEdgeWidth(1.0);
+               ed_fr.setEdgeWidth(m_window.m_varEdgeWidth);
                ed_fr.setLight(light);
-               ed_fr.setModelColor(hpcolor(1.0, 1.0, 1.0, 0.0)); //white);
+               ed_fr.setModelColor(hpcolor(1.0, 1.0, 1.0, m_window.enabled(Window::RenderToggle::ALPHA_BLENDING) ? 0.2 : 1.0)); //white);
                ed_fr.setSqueezeScale(0.45);
                ed_fr.setSqueezeMin(0.35);
+               ed_fr.setDepthScale(m_window.m_varDepthScale);
                render(edp, rc_tris);
           }
 

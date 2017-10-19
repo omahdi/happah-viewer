@@ -145,6 +145,9 @@ private:
      Point3D m_homeCenter {0.0, 0.0, 0.0};
      Point3D m_homePosition {0.0, 0.0, 1.0};
      Point3D m_homeUp {0.0, 1.0, 0.0};
+public:
+     hpreal m_varEdgeWidth {1.0};
+     hpreal m_varDepthScale {1.0};
 };//Window
 
 }//namespace happah

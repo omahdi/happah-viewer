@@ -162,6 +162,35 @@ void Window::onKeyEvent(int key, int code, int action, int mods) {
                }
                break;
           }
+          case GLFW_KEY_LEFT_BRACKET: {
+		     if ((mods & GLFW_MOD_SHIFT) != 0) {
+                    m_varDepthScale -= 0.1;
+                    if (m_varDepthScale < 0.0)
+                         m_varDepthScale = 0.0;
+               } else {
+                    m_varEdgeWidth -= 0.1;
+                    if (m_varEdgeWidth < 0.0)
+                         m_varEdgeWidth = 0.0;
+               }
+               break;
+          }
+          case GLFW_KEY_RIGHT_BRACKET: {
+		     if ((mods & GLFW_MOD_SHIFT) != 0) {
+                    m_varDepthScale += 0.1;
+                    if (m_varDepthScale > 1.0)
+                         m_varDepthScale = 1.0;
+               } else {
+                    m_varEdgeWidth += 0.1;
+               }
+               break;
+          }
+          case GLFW_KEY_EQUAL: {
+		     if ((mods & GLFW_MOD_SHIFT) == 0) {
+                    m_varDepthScale = 1.0;
+                    m_varEdgeWidth = 1.5;
+               }
+               break;
+          }
           }
      }
 }
