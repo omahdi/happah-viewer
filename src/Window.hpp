@@ -101,7 +101,7 @@ public:
 		  DEPTH_TEST,
           _COUNT
      };
-     static_assert(static_cast<int>(RenderToggle::_COUNT) <= 32);
+     static_assert(static_cast<int>(RenderToggle::_COUNT) <= 32, "too many RenderToggle items");
 
      void disable(RenderToggle _what) {
           assert(_what > RenderToggle::_NIL && _what < RenderToggle::_COUNT);
